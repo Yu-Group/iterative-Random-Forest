@@ -107,7 +107,7 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         self.class_weight = class_weight
         self.presort = presort
 
-    def fit(self, X, y, sample_weight=None, check_input=True,
+    def fit(self, X, y, sample_weight=None, feature_weight=None, check_input=True,
             X_idx_sorted=None):
 
         random_state = check_random_state(self.random_state)
@@ -260,6 +260,20 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                                  "number of samples=%d" %
                                  (len(sample_weight), n_samples))
 
+        if feature_weight is not None:
+            if (getattr(feature_weight, "dtype", None) != DOUBLE or
+                    not feature_weight.flags.contiguous):
+                feature_weight = np.ascontiguousarray(
+                    feature_weight, dtype=DOUBLE)
+            if len(feature_weight.shape) > 1:
+                raise ValueError("Feature weights array has more "
+                                 "than one dimension: %d" %
+                                 len(feature_weight.shape))
+            if len(feature_weight) != self.n_features_:
+                raise ValueError("Number of weights=%d does not match "
+                                 "number of features=%d" %
+                                 (len(feature_weight), self.n_features_))
+
         if expanded_class_weight is not None:
             if sample_weight is not None:
                 sample_weight = sample_weight * expanded_class_weight
@@ -358,7 +372,8 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                                            self.min_impurity_decrease,
                                            min_impurity_split)
 
-        builder.build(self.tree_, X, y, sample_weight, X_idx_sorted)
+        builder.build(self.tree_, X, y, sample_weight, feature_weight,
+                      X_idx_sorted)
 
         if self.n_outputs_ == 1:
             self.n_classes_ = self.n_classes_[0]
@@ -745,7 +760,7 @@ class DecisionTreeClassifier(BaseDecisionTree, ClassifierMixin):
             min_impurity_split=min_impurity_split,
             presort=presort)
 
-    def fit(self, X, y, sample_weight=None, check_input=True,
+    def fit(self, X, y, sample_weight=None, feature_weight=None, check_input=True,
             X_idx_sorted=None):
         """Build a decision tree classifier from the training set (X, y).
 
@@ -766,6 +781,9 @@ class DecisionTreeClassifier(BaseDecisionTree, ClassifierMixin):
             ignored if they would result in any single class carrying a
             negative weight in either child node.
 
+        feature_weight : array-like, shape = [n_features] or None
+            <TODO: Add description here>
+
         check_input : boolean, (default=True)
             Allow to bypass several input checking.
             Don't use this parameter unless you know what you do.
@@ -785,6 +803,7 @@ class DecisionTreeClassifier(BaseDecisionTree, ClassifierMixin):
         super(DecisionTreeClassifier, self).fit(
             X, y,
             sample_weight=sample_weight,
+            feature_weight=feature_weight,
             check_input=check_input,
             X_idx_sorted=X_idx_sorted)
         return self
