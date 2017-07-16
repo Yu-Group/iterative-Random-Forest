@@ -30,6 +30,7 @@ from scipy.sparse import csc_matrix
 
 from ._utils cimport log
 from ._utils cimport rand_int
+from ._utils cimport weighted_sampling
 from ._utils cimport rand_uniform
 from ._utils cimport RAND_R_MAX
 from ._utils cimport safe_realloc
@@ -95,6 +96,7 @@ cdef class Splitter:
         self.y = NULL
         self.y_stride = 0
         self.sample_weight = NULL
+        self.feature_weight = NULL
 
         self.max_features = max_features
         self.min_samples_leaf = min_samples_leaf
@@ -120,6 +122,7 @@ cdef class Splitter:
                    object X,
                    np.ndarray[DOUBLE_t, ndim=2, mode="c"] y,
                    DOUBLE_t* sample_weight,
+                   DOUBLE_t* feature_weight,
                    np.ndarray X_idx_sorted=None) except -1:
         """Initialize the splitter.
 
@@ -140,6 +143,9 @@ cdef class Splitter:
             The weights of the samples, where higher weighted samples are fit
             closer than lower weight samples. If not provided, all samples
             are assumed to have uniform weight.
+
+        feature_weight : numpy.ndarray, dtype=DOUBLE_t (optional)
+            <Add description here>
         """
 
         self.rand_r_state = self.random_state.randint(0, RAND_R_MAX)
@@ -183,6 +189,7 @@ cdef class Splitter:
         self.y_stride = <SIZE_t> y.strides[0] / <SIZE_t> y.itemsize
 
         self.sample_weight = sample_weight
+        self.feature_weight = feature_weight
         return 0
 
     cdef int node_reset(self, SIZE_t start, SIZE_t end,
@@ -271,6 +278,7 @@ cdef class BaseDenseSplitter(Splitter):
                   object X,
                   np.ndarray[DOUBLE_t, ndim=2, mode="c"] y,
                   DOUBLE_t* sample_weight,
+                  DOUBLE_t* feature_weight,
                   np.ndarray X_idx_sorted=None) except -1:
         """Initialize the splitter
 
@@ -279,7 +287,7 @@ cdef class BaseDenseSplitter(Splitter):
         """
 
         # Call parent init
-        Splitter.init(self, X, y, sample_weight)
+        Splitter.init(self, X, y, sample_weight, feature_weight)
 
         # Initialize X
         cdef np.ndarray X_ndarray = X
@@ -398,8 +406,15 @@ cdef class BestSplitter(BaseDenseSplitter):
             #   and aren't constant.
 
             # Draw a feature at random
-            f_j = rand_int(n_drawn_constants, f_i - n_found_constants,
-                           random_state)
+            ## TODO: modify this line to use feature weights
+            if self.feature_weight == NULL:
+                f_j = rand_int(n_drawn_constants, f_i - n_found_constants,
+                               random_state)
+            else:
+                # Your code here to use feature weights to do a different kind of split
+                f_j = weighted_sampling(self.features, self.feature_weight, 
+                                        n_known_constants, n_found_constants,
+                                        n_drawn_constants, f_i - n_found_constants, random_state)
 
             if f_j < n_known_constants:
                 # f_j in the interval [n_drawn_constants, n_known_constants[
@@ -701,6 +716,8 @@ cdef class RandomSplitter(BaseDenseSplitter):
         cdef DTYPE_t current_feature_value
         cdef SIZE_t partition_end
 
+        cdef DOUBLE_t* feature_weights = self.feature_weight
+
         _init_split(&best, end)
 
         # Sample up to max_features without replacement using a
@@ -897,6 +914,7 @@ cdef class BaseSparseSplitter(Splitter):
                   object X,
                   np.ndarray[DOUBLE_t, ndim=2, mode="c"] y,
                   DOUBLE_t* sample_weight,
+                  DOUBLE_t* feature_weight,
                   np.ndarray X_idx_sorted=None) except -1:
         """Initialize the splitter
 
@@ -904,7 +922,7 @@ cdef class BaseSparseSplitter(Splitter):
         or 0 otherwise.
         """
         # Call parent init
-        Splitter.init(self, X, y, sample_weight)
+        Splitter.init(self, X, y, sample_weight, feature_weight)
 
         if not isinstance(X, csc_matrix):
             raise ValueError("X should be in csc format")
