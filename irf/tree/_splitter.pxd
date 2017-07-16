@@ -63,6 +63,7 @@ cdef class Splitter:
     cdef DOUBLE_t* y
     cdef SIZE_t y_stride
     cdef DOUBLE_t* sample_weight
+    cdef DOUBLE_t* feature_weight
 
     # The samples vector `samples` is maintained by the Splitter object such
     # that the samples contained in a node are contiguous. With this setting,
@@ -83,6 +84,7 @@ cdef class Splitter:
     # Methods
     cdef int init(self, object X, np.ndarray y,
                   DOUBLE_t* sample_weight,
+                  DOUBLE_t* feature_weight,
                   np.ndarray X_idx_sorted=*) except -1
 
     cdef int node_reset(self, SIZE_t start, SIZE_t end,
