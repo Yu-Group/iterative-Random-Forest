@@ -11,7 +11,7 @@
 import numpy as np
 cimport numpy as np
 from _tree cimport Node
-from sklearn.neighbors.quad_tree cimport Cell
+#from sklearn.neighbors.quad_tree cimport Cell
 
 ctypedef np.npy_float32 DTYPE_t          # Type of X
 ctypedef np.npy_float64 DOUBLE_t         # Type of y, sample_weight
@@ -40,7 +40,7 @@ ctypedef fused realloc_ptr:
     (DOUBLE_t*)
     (DOUBLE_t**)
     (Node*)
-    (Cell*)
+ #   (Cell*)
     (Node**)
     (StackRecord*)
     (PriorityHeapRecord*)
