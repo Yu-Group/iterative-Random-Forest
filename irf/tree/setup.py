@@ -30,7 +30,6 @@ def configuration(parent_package="", top_path=None):
                          libraries=libraries,
                          extra_compile_args=["-O3"])
 
-    config.add_subpackage("tests")
 
     return config
 

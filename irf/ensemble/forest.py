@@ -50,20 +50,20 @@ from scipy.sparse import issparse
 from scipy.sparse import hstack as sparse_hstack
 
 
-from ..base import ClassifierMixin, RegressorMixin
-from ..externals.joblib import Parallel, delayed
-from ..externals import six
-from ..metrics import r2_score
-from ..preprocessing import OneHotEncoder
+from sklearn.base import ClassifierMixin, RegressorMixin
+from sklearn.externals.joblib import Parallel, delayed
+from sklearn.externals import six
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import OneHotEncoder
 from ..tree import (DecisionTreeClassifier, DecisionTreeRegressor,
                     ExtraTreeClassifier, ExtraTreeRegressor)
 from ..tree._tree import DTYPE, DOUBLE
-from ..utils import check_random_state, check_array, compute_sample_weight
-from ..exceptions import DataConversionWarning, NotFittedError
-from .base import BaseEnsemble, _partition_estimators
-from ..utils.fixes import parallel_helper
-from ..utils.multiclass import check_classification_targets
-from ..utils.validation import check_is_fitted
+from sklearn.utils import check_random_state, check_array, compute_sample_weight
+from sklearn.exceptions import DataConversionWarning, NotFittedError
+from sklearn.ensemble.base import BaseEnsemble, _partition_estimators
+from sklearn.utils.fixes import parallel_helper
+from sklearn.utils.multiclass import check_classification_targets
+from sklearn.utils.validation import check_is_fitted
 
 __all__ = ["RandomForestClassifier",
            "RandomForestRegressor",
