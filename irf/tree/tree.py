@@ -26,15 +26,15 @@ from math import ceil
 import numpy as np
 from scipy.sparse import issparse
 
-from ..base import BaseEstimator
-from ..base import ClassifierMixin
-from ..base import RegressorMixin
-from ..externals import six
-from ..utils import check_array
-from ..utils import check_random_state
-from ..utils import compute_sample_weight
-from ..utils.multiclass import check_classification_targets
-from ..utils.validation import check_is_fitted
+from sklearn.base import BaseEstimator
+from sklearn.base import ClassifierMixin
+from sklearn.base import RegressorMixin
+from sklearn.externals import six
+from sklearn.utils import check_array
+from sklearn.utils import check_random_state
+from sklearn.utils import compute_sample_weight
+from sklearn.utils.multiclass import check_classification_targets
+from sklearn.utils.validation import check_is_fitted
 
 from ._criterion import Criterion
 from ._splitter import Splitter
