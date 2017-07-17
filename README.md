@@ -5,16 +5,17 @@ Sumanta Basu, Karl Kumbier, James B. Brown, Bin Yu,  Iterative Random Forests to
 <https://arxiv.org/abs/1706.08457>
 
 ## Basic setup and installation
+The current version only works with python3.
 Before the installation, please make sure you installed the following packages correctly via pip:
 ```bash
-pip install cython numpy scikit-learn 
+pip install cython numpy scikit-learn pydotplus
 ```
 Installing irf package is simple. Just clone this repo and use pip install.
 ```bash
-git clone https://github.com/shifwang/irf
+git clone https://github.com/Yu-Group/iterative-Random-Forest
 ```
 
-Then go to the `irf` folder and use pip install:
+Then go to the `iterative-Random-Forest` folder and use pip install:
 ```bash
 pip install -e .
 ```
