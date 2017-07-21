@@ -4,12 +4,28 @@ The algorithm details are available at:
 Sumanta Basu, Karl Kumbier, James B. Brown, Bin Yu,  Iterative Random Forests to detect predictive and stable high-order interactions, 
 <https://arxiv.org/abs/1706.08457>
 
-## Basic setup and installation
-The current version only works with python3.
-Before the installation, please make sure you installed the following packages correctly via pip:
+The implementation is a joint effort of several people in UC Berkeley. See the [Authors.md](Authors.md) for the complete list.
+The weighted random forest implementation is based on the random forest source code and API design from [scikit-learn](http://scikit-learn.org/stable/index.html), details can be found in *API design for machine learning software: experiences from the scikit-learn project, Buitinck et al., 2013.*. The setup file is based on the setup file from [skgarden](https://github.com/scikit-garden/scikit-garden/tree/master/skgarden). 
+
+## Installation
+### Dependencies
+The irf package requires 
+
+- Python (>= 3.3)
+- Numpy (>= 1.8.2)
+- Scipy (>= 0.13.3)
+- Cython
+- pydotplus
+- matplotlib 
+- jupyter 
+- pyyaml
+
+Before the installation, please make sure you installed the above python packages correctly via pip:
 ```bash
-pip install cython numpy scikit-learn pydotplus
+pip install cython numpy scikit-learn pydotplus jupyter pyyaml matplotlib
 ```
+### Basic setup and installation
+
 Installing irf package is simple. Just clone this repo and use pip install.
 ```bash
 git clone https://github.com/Yu-Group/iterative-Random-Forest
@@ -75,16 +91,5 @@ The proposed feature combination and their scores:
 ```python
 print(stability_score)
 ```
-Contributors:
 
-Shamindra Shrotriya <https://github.com/shamindras>
 
-Runjing(Bryan) Liu <runjing_liu@berkeley.edu>
-
-Stéfan van der Walt <stefan@mentat.za.net>
-
-Chris Holdgraf <choldgraf@berkeley.edu>
-
-Karl Kumbier <kkumbier@berkeley.edu>
-
-Yu(Hue) Wang <wang.yu@berkeley.edu>
