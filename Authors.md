@@ -1,3 +1,8 @@
+This 0.2.1 version is developed by the following people in Spring, 2020:
+
+- Yu(Hue) Wang <wang.yu@berkeley.edu>
+- Eric Xia <ericzxia@berkeley.edu >
+
 This package is developed by the following people starting in Fall, 2016.
 
 Contributors:
