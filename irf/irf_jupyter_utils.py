@@ -10,7 +10,7 @@ import pprint
 import numpy as np
 from . import tree
 from sklearn.model_selection import train_test_split
-from .ensemble import RandomForestClassifier
+from .ensemble import RandomForestClassifierWithWeights
 from IPython.display import display, Image
 from sklearn.datasets import load_breast_cancer
 
@@ -62,7 +62,7 @@ def generate_rf_example(sklearn_ds=load_breast_cancer(),
 
     random_state_classifier: int (default=2018)
         The seed used by the random number generator for
-        the `RandomForestClassifier` function in fitting the random forest
+        the `RandomForestClassifierWithWeights` function in fitting the random forest
 
     Returns
     -------
@@ -78,7 +78,7 @@ def generate_rf_example(sklearn_ds=load_breast_cancer(),
     y_test : array-like or sparse matrix, shape = [n_samples, n_classes]
         Test (validation) labels vector, where n_samples in the
         number of samples and n_classes is the number of classes.
-    rf : RandomForestClassifier object
+    rf : RandomForestClassifierWithWeights object
         The fitted random forest to the training data
 
     Examples
@@ -102,7 +102,7 @@ def generate_rf_example(sklearn_ds=load_breast_cancer(),
         random_state=random_state_split)
 
     # Just fit a simple random forest classifier with 2 decision trees
-    rf = RandomForestClassifier(
+    rf = RandomForestClassifierWithWeights(
         n_estimators=n_estimators, random_state=random_state_classifier)
 
     # fit the classifier
