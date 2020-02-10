@@ -1,1 +1,3 @@
-from .forest import RandomForestClassifier 
+from .wrf import (RandomForestClassifierWithWeights, 
+                  RandomForestRegressorWithWeights)
+from .wrf import wrf

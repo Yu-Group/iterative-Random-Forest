@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from irf import irf_utils
 import numpy as np
+from irf.ensemble import RandomForestClassifierWithWeights
 
 
 def test_iRF_weight1():
@@ -21,7 +22,7 @@ def test_iRF_weight1():
                                             y_train=y_train,
                                             y_test=y_test,
                                             K=5,
-                                            n_estimators=20,
+                                            rf = RandomForestClassifierWithWeights(n_estimators=20),
                                             B=30,
                                             random_state_classifier=2018,
                                             propn_n_samples=.2,
@@ -54,7 +55,7 @@ def test_iRF_weight2():
                                             y_train=y_train,
                                             y_test=y_test,
                                             K=5,
-                                            n_estimators=20,
+                                            rf = RandomForestClassifierWithWeights(n_estimators=20),
                                             B=30,
                                             random_state_classifier=2018,
                                             propn_n_samples=.2,
