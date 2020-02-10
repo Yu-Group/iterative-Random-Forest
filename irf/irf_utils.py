@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 # Needed for the scikit-learn wrapper function
 from sklearn.utils import resample
-from .ensemble import RandomForestClassifier
+from .ensemble import RandomForestClassifierWithWeights
 from math import ceil
 
 
@@ -24,7 +24,7 @@ def all_tree_paths(dtree, root_node_id=0):
     ----------
     dtree : DecisionTreeClassifier object
         An individual decision tree classifier object generated from a
-        fitted RandomForestClassifier object in scikit learn.
+        fitted RandomForestClassifierWithWeights object in scikit learn.
 
     root_node_id : int, optional (default=0)
         The index of the root node of the tree. Should be set as default to
@@ -51,12 +51,12 @@ def all_tree_paths(dtree, root_node_id=0):
     --------
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
-    >>> from sklearn.ensemble import RandomForestClassifier
+    >>> from irf.ensemble import RandomForestClassifierWithWeights
     >>> raw_data = load_breast_cancer()
     >>> X_train, X_test, y_train, y_test = train_test_split(
         raw_data.data, raw_data.target, train_size=0.9,
         random_state=2017)
-    >>> rf = RandomForestClassifier(
+    >>> rf = RandomForestClassifierWithWeights(
         n_estimators=3, random_state=random_state_classifier)
     >>> rf.fit(X=X_train, y=y_train)
     >>> estimator0 = rf.estimators_[0]
@@ -104,7 +104,7 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
 
     Parameters
     ----------
-    inp_class_reg_obj : DecisionTreeClassifier or RandomForestClassifier
+    inp_class_reg_obj : DecisionTreeClassifier or RandomForestClassifierWithWeights
         object [1]_
         An individual decision tree or random forest classifier
         object generated from a fitted Classifier object in scikit learn.
@@ -129,12 +129,12 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
     --------
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
-    >>> from sklearn.ensemble import RandomForestClassifier
+    >>> from irf.ensemble import RandomForestClassifierWithWeights
     >>> raw_data = load_breast_cancer()
     >>> X_train, X_test, y_train, y_test = train_test_split(
         raw_data.data, raw_data.target, train_size=0.9,
         random_state=2017)
-    >>> rf = RandomForestClassifier(
+    >>> rf = RandomForestClassifierWithWeights(
         n_estimators=3, random_state=random_state_classifier)
     >>> rf.fit(X=X_train, y=y_train)
     >>> rf_metrics = get_validation_metrics(inp_class_reg_obj = rf,
@@ -150,7 +150,7 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
 
     # If the object is not a scikit learn classifier then let user know
     if type(inp_class_reg_obj).__name__ not in \
-       ["DecisionTreeClassifier", "RandomForestClassifier"]:
+       ["DecisionTreeClassifier", "WeightedDecisionTreeClassifier", "RandomForestClassifierWithWeights"]:
         raise TypeError("input needs to be a DecisionTreeClassifier object, \
         you have input a {} object".format(type(inp_class_reg_obj)))
 
@@ -256,7 +256,7 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
     ----------
     dtree : DecisionTreeClassifier object
         An individual decision tree classifier object generated from a
-        fitted RandomForestClassifier object in scikit learn.
+        fitted RandomForestClassifierWithWeights object in scikit learn.
 
     X_train : array-like or sparse matrix, shape = [n_samples, n_features]
         Training vector, where n_samples in the number of samples and
@@ -283,12 +283,12 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
     --------
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
-    >>> from sklearn.ensemble import RandomForestClassifier
+    >>> from sklearn.ensemble import RandomForestClassifierWithWeights
     >>> raw_data = load_breast_cancer()
     >>> X_train, X_test, y_train, y_test = train_test_split(
         raw_data.data, raw_data.target, train_size=0.9,
         random_state=2017)
-    >>> rf = RandomForestClassifier(
+    >>> rf = RandomForestClassifierWithWeights(
         n_estimators=3, random_state=2018)
     >>> rf.fit(X=X_train, y=y_train)
     >>> estimator0 = rf.estimators_[0]
@@ -471,6 +471,7 @@ def get_rit_tree_data(all_rf_tree_data,
     """
     A wrapper for the Random Intersection Trees (RIT) algorithm
     """
+    #FIXME no prevalence cutoff for rit
 
     all_rit_tree_outputs = {}
     for idx, rit_tree in enumerate(range(M)):
@@ -605,6 +606,10 @@ def weighted_random_choice(values, weights):
     Discrete distribution, drawing values with the frequency
     specified in weights.
     Weights do not need to be normalized.
+    Parameters:
+        values: list of values 
+    Return:
+        a generator that do weighted sampling
     """
     if not len(weights) == len(values):
         raise ValueError('Equal number of values and weights expected')
@@ -613,6 +618,8 @@ def weighted_random_choice(values, weights):
     # normalize the weights
     weights = weights / weights.sum()
     dist = stats.rv_discrete(values=(range(len(weights)), weights))
+    #FIXME this part should be improved by assigning values directly
+    #    to the stats.rv_discrete function.  -- Yu
 
     while True:
         yield values[dist.rvs()]
@@ -861,13 +868,13 @@ def _get_stability_score(all_rit_bootstrap_output):
         m) / B for m in all_rit_interactions}
     return stability
 
-
 def run_iRF(X_train,
             X_test,
             y_train,
             y_test,
+            rf,
+            initial_weights = None,
             K=7,
-            n_estimators=20,
             B=10,
             random_state_classifier=2018,
             propn_n_samples=0.2,
@@ -896,6 +903,8 @@ def run_iRF(X_train,
 
     y_test : 1d array-like, or label indicator array / sparse matrix
         Ground truth (correct) target values for testing.
+
+    rf : RandomForestClassifierWithWeights to fit
 
 
     K : int, optional (default = 7)
@@ -972,13 +981,10 @@ def run_iRF(X_train,
         if k == 0:
 
             # Initially feature weights are None
-            feature_importances = None
+            feature_importances = initial_weights
 
             # Update the dictionary of all our RF weights
             all_rf_weights["rf_weight{}".format(k)] = feature_importances
-
-            # fit RF feature weights i.e. initially None
-            rf = RandomForestClassifier(n_estimators=n_estimators)
 
             # fit the classifier
             rf.fit(
@@ -996,9 +1002,6 @@ def run_iRF(X_train,
         else:
             # fit weighted RF
             # Use the weights from the previous iteration
-            rf = RandomForestClassifier(n_estimators=n_estimators)
-
-            # fit the classifier
             rf.fit(
                 X=X_train,
                 y=y_train,
@@ -1024,10 +1027,11 @@ def run_iRF(X_train,
         # based on the specified user proportion
         X_train_rsmpl, y_rsmpl = resample(
             X_train, y_train, n_samples=n_samples)
+        # FIXME in iRF R package, when y is discrete, this should be a stratified bootstrap
 
         # Set up the weighted random forest
         # Using the weight from the (K-1)th iteration i.e. RF(w(K))
-        rf_bootstrap = RandomForestClassifier(
+        rf_bootstrap = RandomForestClassifierWithWeights(
             # CHECK: different number of trees to fit for bootstrap samples
             n_estimators=n_estimators_bootstrap)
 
