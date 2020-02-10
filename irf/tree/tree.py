@@ -106,7 +106,7 @@ class TreeWeightsMixin(BaseDecisionTree):
         y = np.atleast_1d(y)
         expanded_class_weight = None
 
-        if y.ndim == 1:
+        if y.ndim == 1 and is_classification:
             # reshape is necessary to preserve the data contiguity against vs
             # [:, np.newaxis] that does not.
             y = np.reshape(y, (-1, 1))
@@ -134,12 +134,7 @@ class TreeWeightsMixin(BaseDecisionTree):
             if self.class_weight is not None:
                 expanded_class_weight = compute_sample_weight(
                     self.class_weight, y_original)
-
-        else:
-            self.classes_ = [None] * self.n_outputs_
-            self.n_classes_ = [1] * self.n_outputs_
-
-        self.n_classes_ = np.array(self.n_classes_, dtype=np.intp)
+            self.n_classes_ = np.array(self.n_classes_, dtype=np.intp)
 
         if getattr(y, "dtype", None) != DOUBLE or not y.flags.contiguous:
             y = np.ascontiguousarray(y, dtype=DOUBLE)
@@ -332,8 +327,13 @@ class TreeWeightsMixin(BaseDecisionTree):
                                                 min_weight_leaf,
                                                 random_state,
                                                 self.presort)
-
-        self.tree_ = Tree(self.n_features_, self.n_classes_, self.n_outputs_)
+        if is_classification:
+            self.tree_ = Tree(self.n_features_, self.n_classes_, self.n_outputs_)
+        else:
+            self.tree_ = Tree(self.n_features_, 
+                              np.array([1] * self.n_outputs_, dtype=np.intp), 
+                              self.n_outputs_)
+            
 
         # Use BestFirst if max_leaf_nodes given; use DepthFirst otherwise
         if max_leaf_nodes < 0:
@@ -355,7 +355,7 @@ class TreeWeightsMixin(BaseDecisionTree):
         builder.build(self.tree_, X, y, sample_weight, feature_weight,
                       X_idx_sorted)
 
-        if self.n_outputs_ == 1:
+        if self.n_outputs_ == 1 and is_classification:
             self.n_classes_ = self.n_classes_[0]
             self.classes_ = self.classes_[0]
 
