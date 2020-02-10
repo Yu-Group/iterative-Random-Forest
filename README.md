@@ -19,6 +19,7 @@ The irf package requires
 - matplotlib 
 - jupyter 
 - pyyaml
+- scikit-learn (>= 0.22)
 
 Before the installation, please make sure you installed the above python packages correctly via pip:
 ```bash
@@ -50,6 +51,7 @@ In order to use irf, you need to import it in python.
 ```python
 import numpy as np
 from irf import irf_utils
+from irf.ensemble import RandomForestClassifierWithWeights
 ```
 Generate a simple data set with 2 features: 1st feature is a noise feature that has no power in predicting the labels, the 2nd feature determines the label perfectly:
 ```python
@@ -72,7 +74,7 @@ all_rf_weights, all_K_iter_rf_data, \
                                         y_train=y_train,
                                         y_test=y_test,
                                         K=5,                          # number of iteration
-                                        n_estimators=20,              # number of trees in the forest
+                                        rf = RandomForestClassifierWithWeights(n_estimators=20),
                                         B=30,
                                         random_state_classifier=2018, # random seed
                                         propn_n_samples=.2,
