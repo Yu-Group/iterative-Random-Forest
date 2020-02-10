@@ -451,7 +451,7 @@ cdef class BestSplitter(BaseDenseSplitter):
 
                     sort(Xf + start, samples + start, end - start)
 
-                if Xf[end - 1] <= Xf[start] + FEATURE_THRESHOLD:
+                if Xf[end - 1] <= Xf[start] + FEATURE_THRESHOLD or self.feature_weight[features[f_j]] == 0:
                     features[f_j] = features[n_total_constants]
                     features[n_total_constants] = current.feature
 
