@@ -43,8 +43,8 @@ class wrf(RandomForestClassifierWithWeights):
             feature_importances = self.feature_importances_
             self.all_rf_weights["rf_weight{}".format(k + 1)] = feature_importances
             if keep_rf:
-                self.all_rfs['rf_{}'.format(k+1)] = clone(rf)
-                self.all_rfs['rf_{}'.format(k+1)].estimators_ = clone(rf.estimators_)
+                self.all_rfs['rf_{}'.format(k+1)] = clone(self)
+                self.all_rfs['rf_{}'.format(k+1)].estimators_ = clone(self.estimators_)
         return self
 
 #Eric: Doesn't lfook like much is changed here, as it looks like no significant differences between regressor and classifier
@@ -71,6 +71,6 @@ class wrf_reg(RandomForestRegressorWithWeights): # Hue: change the name so that 
             feature_importances = self.feature_importances_
             self.all_rf_weights["rf_weight{}".format(k + 1)] = feature_importances
             if keep_rf:
-                self.all_rfs['rf_{}'.format(k+1)] = clone(rf)
-                self.all_rfs['rf_{}'.format(k+1)].estimators_ = clone(rf.estimators_)
+                self.all_rfs['rf_{}'.format(k+1)] = clone(self)
+                self.all_rfs['rf_{}'.format(k+1)].estimators_ = clone(self.estimators_)
         return self
