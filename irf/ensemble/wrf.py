@@ -1,8 +1,10 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.base import clone
 from abc import ABCMeta, abstractmethod
 from ..tree.tree import (WeightedDecisionTreeClassifier, 
                          WeightedDecisionTreeRegressor)
+from ..utils import get_rf_tree_data
 
 class RandomForestClassifierWithWeights(RandomForestClassifier):
     def fit(self, X, y, sample_weight=None, feature_weight=None):
@@ -21,61 +23,69 @@ class RandomForestRegressorWithWeights(RandomForestRegressor):
         return super(RandomForestRegressorWithWeights, self).fit(X, y, sample_weight)
         
 class wrf(RandomForestClassifierWithWeights):
-    def fit(self, X, y, sample_weight=None, feature_weight=None, K = 5):
+    def fit(self, X, y, sample_weight=None, feature_weight=None, K = 5, 
+            keep_record = True, X_test = None, y_test = None):
+        self.all_rf_weights = dict()
+        if keep_record:
+            self.all_K_iter_rf_data = dict()
+            assert X_test is not None, 'X_test should not be None when keep_record'
+            assert y_test is not None, 'y_test should not be None when keep_record'
         for k in range(K):
             if k == 0:
                 # Initially feature weights are None
                 feature_importances = feature_weight
+                self.all_rf_weights['rf_weights{}'.format(k)] = feature_importances
                 
-                # fit the classifier
-                super(wrf, self).fit(X=X,
-                         y=y,
-                         feature_weight=feature_importances)
-                
-                # Update feature weights using the
-                # new feature importance score
-                feature_importances = self.feature_importances_
-
-            else:
-                # fit weighted RF
-                # fit the classifier
-                super(wrf, self).fit(
-                        X=X,
-                        y=y,
-                        feature_weight=feature_importances)
-                
-                # Update feature weights using the
-                # new feature importance score
-                feature_importances = self.feature_importances_
+            # fit weighted RF
+            # fit the classifier
+            super(wrf, self).fit(
+                    X=X,
+                    y=y,
+                    feature_weight=feature_importances)
+            
+            # Update feature weights using the
+            # new feature importance score
+            feature_importances = self.feature_importances_
+            self.all_rf_weights["rf_weight{}".format(k + 1)] = feature_importances
+            if keep_record:
+                self.all_K_iter_rf_data["rf_iter{}".format(k+1)] = get_rf_tree_data(
+                        rf=self,
+                        X_train=X,
+                        X_test=X_test,
+                        y_test=y_test)
         return self
 
 #Eric: Doesn't lfook like much is changed here, as it looks like no significant differences between regressor and classifier
 #       come back to later to make sure there really is no difference                
 class wrf_reg(RandomForestRegressorWithWeights): # Hue: change the name so that it does not clash with the first one.
-    def fit(self, X, y, sample_weight=None, feature_weight=None, K = 5):
+    def fit(self, X, y, sample_weight=None, feature_weight=None, K = 5, 
+            keep_record = True, X_test = None, y_test = None):
+        self.all_rf_weights = dict()
+        if keep_record:
+            self.all_K_iter_rf_data = dict()
+            assert X_test is not None, 'X_test should not be None when keep_record'
+            assert y_test is not None, 'y_test should not be None when keep_record'
         for k in range(K):
             if k == 0:
                 # Initially feature weights are None
                 feature_importances = feature_weight
+                self.all_rf_weights['rf_weights{}'.format(k)] = feature_importances
                 
-                # fit the classifier
-                super(wrf_reg, self).fit(X=X,
-                         y=y,
-                         feature_weight=feature_importances)
-                
-                # Update feature weights using the
-                # new feature importance score
-                feature_importances = self.feature_importances_
-
-            else:
-                # fit weighted RF
-                # fit the regressor
-                super(wrf_reg, self).fit(
-                        X=X,
-                        y=y,
-                        feature_weight=feature_importances)
-                
-                # Update feature weights using the
-                # new feature importance score
-                feature_importances = self.feature_importances_
+            # fit weighted RF
+            # fit the regressor
+            super(wrf_reg, self).fit(
+                    X=X,
+                    y=y,
+                    feature_weight=feature_importances)
+            
+            # Update feature weights using the
+            # new feature importance score
+            feature_importances = self.feature_importances_
+            self.all_rf_weights["rf_weight{}".format(k + 1)] = feature_importances
+            if keep_record:
+                self.all_K_iter_rf_data["rf_iter{}".format(k+1)] = get_rf_tree_data(
+                        rf=self,
+                        X_train=X_train,
+                        X_test=X_test,
+                        y_test=y_test)
         return self
