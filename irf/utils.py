@@ -4,7 +4,8 @@ from functools import partial
 from functools import reduce
 from sklearn.tree import _tree
 from sklearn.base import ClassifierMixin
-
+import matplotlib.pyplot as plt
+import pyfpgrowth
 
 # Get all RF and decision tree data
 
@@ -373,7 +374,173 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
     return classification_metrics
 
 
+def compute_impurity_decrease(dtree):
+    '''
+    Compute the impurity decrease at each node
+    '''
+    impurity = dtree.tree_.impurity
+    weight = dtree.tree_.n_node_samples
+    weight = [x / weight[0] for x in weight] # normalize the weight
+    impurity_decrease = []
+    n_nodes = len(weight)
+    for i in range(n_nodes):
+        left_child = dtree.tree_.children_left[i]
+        right_child = dtree.tree_.children_right[i]
+        if left_child < 0 or right_child < 0:
+            impurity_decrease.append(-1)
+        else:
+            curr_impurity = weight[i] * impurity[i]
+            left_impurity = weight[left_child] * impurity[left_child]
+            right_impurity = weight[right_child] * impurity[right_child]
+            impurity_decrease.append(curr_impurity - left_impurity - right_impurity)
+    return impurity_decrease
 
+def visualize_impurity_decrease(dtree_or_rf, yscale='log', **kwargs):
+    ''' 
+    Visualize the impurity decrease at each node
+    '''
+    out = []
+    if hasattr(dtree_or_rf, 'tree_'):
+        impurity_decrease = compute_impurity_decrease(dtree_or_rf)
+        out = out + [x for x in impurity_decrease if x >= 0]
+    elif hasattr(dtree_or_rf, 'estimators_'):
+        for tree in dtree_or_rf.estimators_:
+            impurity_decrease = compute_impurity_decrease(tree)
+            out = out + [x for x in impurity_decrease if x >= 0]
+    else:
+        print("cannot recognize the input")
+    plt.hist(out, **kwargs)
+    plt.yscale(yscale)
+    plt.show()
+
+def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, signed=False):
+    '''
+    Compute the prevalent interactions and their prevalence
+    '''
+    feature_paths, weight = get_filtered_feature_paths(rf, impurity_decrease_threshold, signed=signed)
+    feature_paths = [set(list(path)) for path in feature_paths]
+    patterns = pyfpgrowth.find_frequent_patterns(feature_paths, min_support)
+    #print(feature_paths)
+    prevalence = {p:0 for p in patterns}
+    for key in patterns:
+        p = set(list(key))
+        for path, w in zip(feature_paths, weight):
+            if p.issubset(path):
+                prevalence[key] += w
+    return prevalence
+        
+    
+    
+def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False):
+    '''
+    Get the set of feature paths and their weights filtered by
+        the impurity decrease
+    '''
+    if hasattr(dtree_or_rf, 'tree_'):
+        impurity_decrease = compute_impurity_decrease(dtree_or_rf)
+        features = dtree_or_rf.tree_.feature
+        filtered = [x > threshold for x in impurity_decrease]
+        if signed:
+            tree_paths = all_tree_signed_paths(dtree_or_rf)
+            #print(tree_paths)
+            feature_paths = []
+            for path in tree_paths:
+                tmp = [(features[x[0]],x[1]) for x in path if filtered[x[0]]]
+                # remove features that appear twice
+                cleaned = []
+                cache = set()
+                for k in tmp:
+                    if k[0] not in cache:
+                        cleaned.append(k)
+                        cache.add(k[0])
+                feature_paths.append(cleaned)
+        else:
+            tree_paths = all_tree_paths(dtree_or_rf)
+            feature_paths = []
+            for path in tree_paths:
+                feature_paths.append([features[x] for x in path if filtered[x]])
+                
+        weight = [2 ** (1-len(path)) for path in tree_paths]
+        return feature_paths, weight
+    elif hasattr(dtree_or_rf, 'estimators_'):
+        all_fs = []
+        all_ws = []
+        for tree in dtree_or_rf.estimators_:
+            feature_paths, weight = get_filtered_feature_paths(tree, threshold, signed)
+            all_fs += feature_paths
+            all_ws += [w / dtree_or_rf.n_estimators for w in weight]
+        return all_fs, all_ws
+def all_tree_signed_paths(dtree, root_node_id=0):
+    """
+    Get all the individual tree signed paths from root node to the leaves
+    for a decision tree classifier object [1]_.
+    Parameters
+    ----------
+    dtree : DecisionTreeClassifier object
+        An individual decision tree classifier object generated from a
+        fitted RandomForestClassifier object in scikit learn.
+    root_node_id : int, optional (default=0)
+        The index of the root node of the tree. Should be set as default to
+        0 and not changed by the user
+    Returns
+    -------
+    paths : list of lists
+        Return a list of lists like this [(feature index, 'L'/'R'),...]
+        taken from the root node to the leaf in the decsion tree
+        classifier. There is an individual array for each
+        leaf node in the decision tree.
+    Notes
+    -----
+        To obtain a deterministic behaviour during fitting,
+        ``random_state`` has to be fixed.
+    References
+    ----------
+        .. [1] https://en.wikipedia.org/wiki/Decision_tree_learning
+    Examples
+    --------
+    >>> from sklearn.datasets import load_breast_cancer
+    >>> from sklearn.model_selection import train_test_split
+    >>> from sklearn.ensemble import RandomForestClassifier
+    >>> raw_data = load_breast_cancer()
+    >>> X_train, X_test, y_train, y_test = train_test_split(
+        raw_data.data, raw_data.target, train_size=0.9,
+        random_state=2017)
+    >>> rf = RandomForestClassifier(
+        n_estimators=3, random_state=random_state_classifier)
+    >>> rf.fit(X=X_train, y=y_train)
+    >>> estimator0 = rf.estimators_[0]
+    >>> tree_dat0 = all_tree_signed_paths(dtree = estimator0,
+                                   root_node_id = 0)
+    >>> tree_dat0
+    ...                             # doctest: +SKIP
+    ...
+    """
+    #TODO: use the decision path function in sklearn to optimize the code
+    
+    # Use these lists to parse the tree structure
+    children_left = dtree.tree_.children_left
+    children_right = dtree.tree_.children_right
+
+    if root_node_id is None:
+        paths = []
+
+    if root_node_id == _tree.TREE_LEAF:
+        raise ValueError("Invalid node_id %s" % _tree.TREE_LEAF)
+
+    # if left/right is None we'll get empty list anyway
+    feature_id = dtree.tree_.feature[root_node_id] 
+    if children_left[root_node_id] != _tree.TREE_LEAF:
+        
+        
+        paths_left = [[(feature_id, '-')] + l
+                 for l in all_tree_signed_paths(dtree, children_left[root_node_id])]
+        paths_right = [[(feature_id, '+')] + l
+                 for l in all_tree_signed_paths(dtree, children_right[root_node_id])]
+        paths = paths_left + paths_right
+    else:
+        paths = [[]]
+    return paths
+    
 def all_tree_paths(dtree, root_node_id=0):
     """
     Get all the individual tree paths from root node to the leaves
