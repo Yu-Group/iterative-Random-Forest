@@ -418,7 +418,7 @@ def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, 
     Compute the prevalent interactions and their prevalence
     '''
     feature_paths, weight = get_filtered_feature_paths(rf, impurity_decrease_threshold, signed=signed)
-    feature_paths = [set(list(path)) for path in feature_paths]
+    feature_paths = [list(path) for path in feature_paths]
     patterns = pyfpgrowth.find_frequent_patterns(feature_paths, min_support)
     #print(feature_paths)
     prevalence = {p:0 for p in patterns}
@@ -429,7 +429,16 @@ def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, 
                 prevalence[key] += w
     return prevalence
         
-    
+def visualize_prevalent_interactions(prevalence):
+    orders = [len(x) for x in prevalence]
+    log2_prevalence = [np.log(x) / np.log(2) for x in prevalence.values()]
+    plt.scatter(orders, log2_prevalence, alpha=0.7)
+    plt.plot([0, max(orders)+0.5], [0, -max(orders)-0.5])
+    plt.xlim(0, max(orders)+0.5)
+    plt.ylim(min(log2_prevalence)-0.5, 0)
+    plt.ylabel('log2(prevalence)')
+    plt.xlabel('order of the interactions')
+    plt.show()
     
 def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False):
     '''
@@ -454,13 +463,14 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False):
                         cleaned.append(k)
                         cache.add(k[0])
                 feature_paths.append(cleaned)
+            weight = [2 ** (-len(path)) for path in tree_paths]
         else:
             tree_paths = all_tree_paths(dtree_or_rf)
             feature_paths = []
             for path in tree_paths:
-                feature_paths.append([features[x] for x in path if filtered[x]])
-                
-        weight = [2 ** (1-len(path)) for path in tree_paths]
+                feature_paths.append(list(set([features[x] for x in path if filtered[x]])))
+            weight = [2 ** (1-len(path)) for path in tree_paths]    
+        
         return feature_paths, weight
     elif hasattr(dtree_or_rf, 'estimators_'):
         all_fs = []
@@ -528,13 +538,12 @@ def all_tree_signed_paths(dtree, root_node_id=0):
         raise ValueError("Invalid node_id %s" % _tree.TREE_LEAF)
 
     # if left/right is None we'll get empty list anyway
-    feature_id = dtree.tree_.feature[root_node_id] 
     if children_left[root_node_id] != _tree.TREE_LEAF:
         
         
-        paths_left = [[(feature_id, '-')] + l
+        paths_left = [[(root_node_id, '-')] + l
                  for l in all_tree_signed_paths(dtree, children_left[root_node_id])]
-        paths_right = [[(feature_id, '+')] + l
+        paths_right = [[(root_node_id, '+')] + l
                  for l in all_tree_signed_paths(dtree, children_right[root_node_id])]
         paths = paths_left + paths_right
     else:
