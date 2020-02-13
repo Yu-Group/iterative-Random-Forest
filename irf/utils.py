@@ -429,12 +429,14 @@ def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, 
                 prevalence[key] += w
     return prevalence
         
+from matplotlib.ticker import MaxNLocator
 def visualize_prevalent_interactions(prevalence):
     orders = [len(x) for x in prevalence]
     log2_prevalence = [np.log(x) / np.log(2) for x in prevalence.values()]
     plt.scatter(orders, log2_prevalence, alpha=0.7)
     plt.plot([0, max(orders)+0.5], [0, -max(orders)-0.5])
     plt.xlim(0, max(orders)+0.5)
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.ylim(min(log2_prevalence)-0.5, 0)
     plt.ylabel('log2(prevalence)')
     plt.xlabel('order of the interactions')
