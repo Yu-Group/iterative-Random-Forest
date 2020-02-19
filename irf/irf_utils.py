@@ -21,6 +21,11 @@ from .ensemble import (RandomForestClassifierWithWeights,
 
 from math import ceil
 
+# Needed for FPGrowth
+from pyspark.ml.fpm import FPGrowth
+from pyspark.sql import SparkSession
+from pyspark.sql.types import *
+
 
 
 # Random Intersection Tree (RIT)
@@ -617,6 +622,198 @@ def run_iRF(X_train,
         all_K_iter_rf_data, all_rf_bootstrap_output,\
         all_rit_bootstrap_output, stability_score
 
+def run_iRF_FPGrowth(X_train,
+            X_test,
+            y_train,
+            y_test,
+            rf,
+            rf_bootstrap = None,
+            initial_weights = None,
+            K=7,
+            B=10,
+            random_state_classifier=2018,
+            propn_n_samples=0.2,
+            bin_class_type=1,
+            min_confidence=0.8,
+            min_support=0.1,
+            signed=False,
+            bootstrap_num=5):
+    """
+    Runs the iRF algorithm but instead of RIT for interactions, runs FP-Growth through Spark.
+
+
+    Parameters
+    --------
+    X_train : array-like or sparse matrix, shape = [n_samples, n_features]
+        Training vector, where n_samples in the number of samples and
+        n_features is the number of features.
+
+    X_test : array-like or sparse matrix, shape = [n_samples, n_features]
+        Test vector, where n_samples in the number of samples and
+        n_features is the number of features.
+
+    y_train : 1d array-like, or label indicator array / sparse matrix
+        Ground truth (correct) target values for training.
+
+    y_test : 1d array-like, or label indicator array / sparse matrix
+        Ground truth (correct) target values for testing.
+
+    rf : RandomForest model to fit
+    
+    rf_bootstrap : random forest model to fit in the RIT stage, default None, which means it is the same as rf.
+        The number of trees in this model should be set smaller as this step is quite time consuming.
+
+    K : int, optional (default = 7)
+        The number of iterations in iRF.
+
+    n_estimators : int, optional (default = 20)
+        The number of trees in the random forest when computing weights.
+
+    B : int, optional (default = 10)
+        The number of bootstrap samples
+
+    random_state_classifier : int, optional (default = 2018)
+        The random seed for reproducibility.
+
+    propn_n_samples : float, optional (default = 0.2)
+        The proportion of samples drawn for bootstrap.
+
+    bin_class_type : int, optional (default = 1)
+        ...
+
+    min_confidence: float, optional (default = 0.8)
+        FP-Growth has a parameter min_confidence which is the minimum frequency of an interaction set amongst all transactions
+        in order for it to be returned
+    
+    bootstrap_num: float, optional (default = 5)
+        Top number used in computing the stability score
+
+
+    Returns
+    --------
+    all_rf_weights: dict
+        stores feature weights across all iterations
+
+    all_rf_bootstrap_output: dict
+        stores rf information across all bootstrap samples
+
+    all_rit_bootstrap_output: dict
+        stores rit information across all bootstrap samples
+
+    stability_score: dict
+        stores interactions in as its keys and stabilities scores as the values
+
+    """
+    print("iRF FP_Growth has been updated")
+    # Set the random state for reproducibility
+    np.random.seed(random_state_classifier)
+
+    # Convert the bootstrap resampling proportion to the number
+    # of rows to resample from the training data
+    n_samples = ceil(propn_n_samples * X_train.shape[0])
+
+    # All Random Forest data
+    all_K_iter_rf_data = {}
+
+    # Initialize dictionary of rf weights
+    # CHECK: change this name to be `all_rf_weights_output`
+    all_rf_weights = {}
+
+    # Initialize dictionary of bootstrap rf output
+    all_rf_bootstrap_output = {}
+
+    # Initialize dictionary of bootstrap FP-Growth output
+    all_FP_Growth_bootstrap_output = {}
+    
+    if type(rf) is RandomForestClassifierWithWeights:
+        weightedRF = wrf(**rf.get_params())
+    elif type(rf) is RandomForestRegressorWithWeights:
+        weightedRF = wrf_reg(**rf.get_params())
+    else:
+        raise ValueError('the type of rf cannot be {}'.format(type(rf)))
+    
+    weightedRF.fit(X=X_train, y=y_train, feature_weight = initial_weights, K=K,
+                   X_test = X_test, y_test = y_test)
+    all_rf_weights = weightedRF.all_rf_weights
+    all_K_iter_rf_data = weightedRF.all_K_iter_rf_data
+
+    # Run the FP-Growths
+    if rf_bootstrap is None:
+            rf_bootstrap = rf
+    for b in range(B):
+
+        # Take a bootstrap sample from the training data
+        # based on the specified user proportion
+        if isinstance(rf, ClassifierMixin):
+            X_train_rsmpl, y_rsmpl = resample(
+                X_train, y_train, n_samples=n_samples, stratify = y_train)
+        else:
+            X_train_rsmpl, y_rsmpl = resample(
+                X_train, y_train, n_samples=n_samples)
+
+        # Set up the weighted random forest
+        # Using the weight from the (K-1)th iteration i.e. RF(w(K))
+        rf_bootstrap = clone(rf)
+        
+        # CHECK: different number of trees to fit for bootstrap samples
+        rf_bootstrap.n_estimators=n_estimators_bootstrap
+
+        # Fit RF(w(K)) on the bootstrapped dataset
+        rf_bootstrap.fit(
+            X=X_train_rsmpl,
+            y=y_rsmpl,
+            feature_weight=all_rf_weights["rf_weight{}".format(K)])
+
+        # All RF tree data
+        # CHECK: why do we need y_train here?
+        all_rf_tree_data = get_rf_tree_data(
+            rf=rf_bootstrap,
+            X_train=X_train_rsmpl,
+            X_test=X_test,
+            y_test=y_test,
+            signed=signed)
+
+        # Update the rf bootstrap output dictionary
+        all_rf_bootstrap_output['rf_bootstrap{}'.format(b)] = all_rf_tree_data
+
+        # Run FP-Growth on interaction rule set
+        all_FP_Growth_data = generate_all_samples(all_rf_tree_data, bin_class_type)
+        spark = SparkSession \
+                    .builder \
+                    .appName("iterative Random Forests with FP-Growth") \
+                    .getOrCreate()
+    
+        # Load all interactions into Spark dataframe
+        input_list = [(i, all_FP_Growth_data[i].tolist()) for i in range(len(all_FP_Growth_data))]
+        df = spark.createDataFrame(input_list, ["id", "items"])
+
+        # Run FP-Growth on data
+        fpGrowth = FPGrowth(itemsCol="items", minSupport=min_support, minConfidence=min_confidence)
+        model = fpGrowth.fit(df)
+        item_sets = model.freqItemsets.toPandas()
+
+        # Update the rf_FP_Growth bootstrap output dictionary
+        item_sets = item_sets.sort_values(by=["freq"], ascending=False)
+        all_FP_Growth_bootstrap_output['rf_bootstrap{}'.format(
+            b)] = item_sets
+
+    stability_score = _FP_Growth_get_stability_score(
+        all_FP_Growth_bootstrap_output=all_FP_Growth_bootstrap_output, bootstrap_num=bootstrap_num)
+
+    return all_rf_weights,\
+        all_K_iter_rf_data, all_rf_bootstrap_output,\
+        all_FP_Growth_bootstrap_output, stability_score
+
+def generate_all_samples(all_rf_tree_data, bin_class_type=1):
+    n_estimators = all_rf_tree_data['rf_obj'].n_estimators
+
+    all_paths = []
+    for dtree in range(n_estimators):
+        filtered = filter_leaves_classifier(
+            dtree_data=all_rf_tree_data['dtree{}'.format(dtree)],
+            bin_class_type=bin_class_type)
+        all_paths.extend(filtered['uniq_feature_paths'])
+    return all_paths
 
 def _hist_features(all_rf_tree_data, n_estimators,
                    xlabel='features',
