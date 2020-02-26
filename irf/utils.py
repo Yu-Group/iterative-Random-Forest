@@ -395,7 +395,7 @@ def compute_impurity_decrease(dtree):
             impurity_decrease.append(curr_impurity - left_impurity - right_impurity)
     return impurity_decrease
 
-def visualize_impurity_decrease(dtree_or_rf, yscale='log', **kwargs):
+def visualize_impurity_decrease(dtree_or_rf, yscale='log', xscale='log', **kwargs):
     ''' 
     Visualize the impurity decrease at each node
     '''
@@ -411,6 +411,7 @@ def visualize_impurity_decrease(dtree_or_rf, yscale='log', **kwargs):
         print("cannot recognize the input")
     plt.hist(out, **kwargs)
     plt.yscale(yscale)
+    plt.xscale(xscale)
     plt.show()
 
 def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, signed=False):
@@ -430,22 +431,28 @@ def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, 
     return prevalence
         
 from matplotlib.ticker import MaxNLocator
-def visualize_prevalent_interactions(prevalence):
+def visualize_prevalent_interactions(prevalence, **kwargs):
     orders = [len(x) for x in prevalence]
     log2_prevalence = [np.log(x) / np.log(2) for x in prevalence.values()]
     plt.scatter(orders, log2_prevalence, alpha=0.7)
     plt.plot([0, max(orders)+0.5], [0, -max(orders)-0.5])
     plt.xlim(0, max(orders)+0.5)
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-    plt.ylim(min(log2_prevalence)-0.5, 0)
+    if 'ylim' in kwargs:
+        plt.ylim(kwargs['ylim'][0], kwargs['ylim'][1])
+    else:
+        plt.ylim(min(log2_prevalence)-0.5, 0)
     plt.ylabel('log2(prevalence)')
     plt.xlabel('order of the interactions')
     plt.show()
     
-def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False):
+def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False, 
+                               weight_scheme='depth'):
     '''
     Get the set of feature paths and their weights filtered by
         the impurity decrease
+    Input:
+        weight : ['depth', 'samplesize', 'label']
     '''
     if hasattr(dtree_or_rf, 'tree_'):
         impurity_decrease = compute_impurity_decrease(dtree_or_rf)
@@ -465,7 +472,17 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False):
                         cleaned.append(k)
                         cache.add(k[0])
                 feature_paths.append(cleaned)
-            weight = [2 ** (-len(path)) for path in tree_paths]
+            if weight_scheme == 'depth':
+                weight = [2 ** (-len(path)) for path in tree_paths]
+            elif weight_scheme == 'samplesize':
+                samplesize_per_node = dtree_or_rf.tree_.weighted_n_node_samples
+                weight = [samplesize_per_node[path[-1]] for path in tree_paths]
+                total = sum(weight)
+                weight = [w / total for w in weight]
+            elif weight_scheme == 'label':
+                weight = None
+            else:
+                weight = None 
         else:
             tree_paths = all_tree_paths(dtree_or_rf)
             feature_paths = []
