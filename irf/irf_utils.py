@@ -436,6 +436,28 @@ def _get_stability_score(all_rit_bootstrap_output):
         m) / B for m in all_rit_interactions}
     return stability
 
+def _FP_Growth_get_stability_score(all_FP_Growth_bootstrap_output, bootstrap_num):
+    """
+    Get the stabilty score from B bootstrap Random Forest
+    Fits with FP-Growth
+    """
+
+    # Initialize values
+    bootstrap_interact = []
+    B = len(all_FP_Growth_bootstrap_output)
+
+    for b in range(B):
+        itemsets = all_FP_Growth_bootstrap_output['rf_bootstrap{}'.format(b)]
+        top_itemsets = itemsets.head(bootstrap_num)
+        top_itemsets = list(top_itemsets["items"].map(lambda s: "_".join([str(x) for x in sorted(s)])))
+        bootstrap_interact.append(top_itemsets)
+
+    def flatten(l): return [item for sublist in l for item in sublist]
+    all_FP_Growth_interactions = flatten(bootstrap_interact)
+    stability = {m: all_FP_Growth_interactions.count(
+        m) / B for m in all_FP_Growth_interactions}
+    return stability
+
 def run_iRF(X_train,
             X_test,
             y_train,
@@ -637,6 +659,7 @@ def run_iRF_FPGrowth(X_train,
             min_confidence=0.8,
             min_support=0.1,
             signed=False,
+            n_estimators_bootstrap=5,
             bootstrap_num=5):
     """
     Runs the iRF algorithm but instead of RIT for interactions, runs FP-Growth through Spark.
@@ -704,7 +727,6 @@ def run_iRF_FPGrowth(X_train,
         stores interactions in as its keys and stabilities scores as the values
 
     """
-    print("iRF FP_Growth has been updated")
     # Set the random state for reproducibility
     np.random.seed(random_state_classifier)
 
@@ -778,6 +800,7 @@ def run_iRF_FPGrowth(X_train,
 
         # Run FP-Growth on interaction rule set
         all_FP_Growth_data = generate_all_samples(all_rf_tree_data, bin_class_type)
+
         spark = SparkSession \
                     .builder \
                     .appName("iterative Random Forests with FP-Growth") \
