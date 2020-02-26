@@ -10,7 +10,7 @@ import pyfpgrowth
 # Get all RF and decision tree data
 
 
-def get_rf_tree_data(rf, X_train, X_test, y_test):
+def get_rf_tree_data(rf, X_train, X_test, y_test, signed=False):
     """
     Get the entire fitted random forest and its decision tree data
     as a convenient dictionary format
@@ -31,7 +31,8 @@ def get_rf_tree_data(rf, X_train, X_test, y_test):
 
     # Create a dictionary with all random forest metrics
     # This currently includes the entire random forest fitted object
-    all_rf_tree_outputs = {"get_params": rf.get_params(),
+    all_rf_tree_outputs = {"rf_obj": rf,
+                           "get_params": rf.get_params,
                            "rf_validation_metrics": rf_validation_metrics,
                            "feature_importances": feature_importances,
                            "feature_importances_std": feature_importances_std,
@@ -44,14 +45,15 @@ def get_rf_tree_data(rf, X_train, X_test, y_test):
                                   X_test=X_test,
                                   y_test=y_test,
                                   dtree=dtree,
-                                  root_node_id=0)
+                                  root_node_id=0,
+                                  signed=signed)
 
         # Append output to our combined random forest outputs dict
         all_rf_tree_outputs["dtree{}".format(idx)] = dtree_out
 
     return all_rf_tree_outputs
 
-def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
+def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0, signed=False):
     """
     This returns all of the required summary results from an
     individual decision tree
@@ -60,7 +62,7 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
     ----------
     dtree : DecisionTreeClassifier object
         An individual decision tree classifier object generated from a
-        fitted RandomForestClassifierWithWeights object in scikit learn.
+        fitted RandomForestClassifier object in scikit learn.
 
     X_train : array-like or sparse matrix, shape = [n_samples, n_features]
         Training vector, where n_samples in the number of samples and
@@ -77,6 +79,9 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
         The index of the root node of the tree. Should be set as default to
         0 and not changed by the user
 
+    signed : bool, optional (default=False)
+        Indicates whether to use signed interactions or not
+
     Returns
     -------
     tree_data : dict
@@ -87,12 +92,12 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
     --------
     >>> from sklearn.datasets import load_breast_cancer
     >>> from sklearn.model_selection import train_test_split
-    >>> from sklearn.ensemble import RandomForestClassifierWithWeights
+    >>> from sklearn.ensemble import RandomForestClassifier
     >>> raw_data = load_breast_cancer()
     >>> X_train, X_test, y_train, y_test = train_test_split(
         raw_data.data, raw_data.target, train_size=0.9,
         random_state=2017)
-    >>> rf = RandomForestClassifierWithWeights(
+    >>> rf = RandomForestClassifier(
         n_estimators=3, random_state=2018)
     >>> rf.fit(X=X_train, y=y_train)
     >>> estimator0 = rf.estimators_[0]
@@ -137,12 +142,19 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
     num_features_used = (np.unique(node_features_idx)).shape[0]
 
     # Get all of the paths used in the tree
-    all_leaf_node_paths = all_tree_paths(dtree=dtree,
-                                         root_node_id=root_node_id)
+    if not signed:
+        all_leaf_node_paths = all_tree_paths(dtree=dtree,
+                                             root_node_id=root_node_id)
+    else:
+        all_leaf_node_paths = all_tree_signed_paths(dtree=dtree,
+                                                    root_node_id=root_node_id)
 
     # Get list of leaf nodes
     # In all paths it is the final node value
-    all_leaf_nodes = [path[-1] for path in all_leaf_node_paths]
+    if not signed:
+        all_leaf_nodes = [path[-1] for path in all_leaf_node_paths]
+    else:
+        all_leaf_nodes = [path[-1][0] for path in all_leaf_node_paths]
 
     # Get the total number of training samples used in each leaf node
     all_leaf_node_samples = [n_node_samples[node_id].astype(int)
@@ -182,13 +194,31 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0):
     # Investigate further
     # Removed the final leaf node value so that this feature does not get
     # included currently
-    all_leaf_paths_features = [node_features_idx[path[:-1]]
-                               for path in all_leaf_node_paths]
+    if not signed:
+        all_leaf_paths_features = [node_features_idx[path[:-1]]
+                                    for path in all_leaf_node_paths]
+    else:
+        all_leaf_paths_features = []
+        for path in all_leaf_node_paths:
+            temp = []
+            all_but_last = path[:-1]
+            for elem in all_but_last:
+                temp.append((node_features_idx[elem[0]], elem[1]))
+            all_leaf_paths_features += [temp]
 
     # Get the unique list of features along a path
     # NOTE: This removes the original ordering of the features along the path
     # The original ordering could be preserved using a special function but
     # will increase runtime
+    if signed:
+        new_all_leaf_paths_features = []
+        for path in all_leaf_paths_features:
+            new_path = []
+            for elem in path:
+                new_path.append(str(elem[0]) + elem[1])
+            new_all_leaf_paths_features += [new_path]
+        all_leaf_paths_features = new_all_leaf_paths_features
+
     all_uniq_leaf_paths_features = [
         np.unique(feature_path) for feature_path in all_leaf_paths_features]
 
@@ -499,18 +529,22 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False,
             all_fs += feature_paths
             all_ws += [w / dtree_or_rf.n_estimators for w in weight]
         return all_fs, all_ws
+        
 def all_tree_signed_paths(dtree, root_node_id=0):
     """
     Get all the individual tree signed paths from root node to the leaves
     for a decision tree classifier object [1]_.
+
     Parameters
     ----------
     dtree : DecisionTreeClassifier object
         An individual decision tree classifier object generated from a
         fitted RandomForestClassifier object in scikit learn.
+
     root_node_id : int, optional (default=0)
         The index of the root node of the tree. Should be set as default to
         0 and not changed by the user
+
     Returns
     -------
     paths : list of lists
@@ -518,13 +552,16 @@ def all_tree_signed_paths(dtree, root_node_id=0):
         taken from the root node to the leaf in the decsion tree
         classifier. There is an individual array for each
         leaf node in the decision tree.
+
     Notes
     -----
         To obtain a deterministic behaviour during fitting,
         ``random_state`` has to be fixed.
+
     References
     ----------
         .. [1] https://en.wikipedia.org/wiki/Decision_tree_learning
+
     Examples
     --------
     >>> from sklearn.datasets import load_breast_cancer
@@ -557,16 +594,15 @@ def all_tree_signed_paths(dtree, root_node_id=0):
         raise ValueError("Invalid node_id %s" % _tree.TREE_LEAF)
 
     # if left/right is None we'll get empty list anyway
+    feature_id = dtree.tree_.feature[root_node_id] 
     if children_left[root_node_id] != _tree.TREE_LEAF:
-        
-        
-        paths_left = [[(root_node_id, '-')] + l
+        paths_left = [[(root_node_id, 'L')] + l
                  for l in all_tree_signed_paths(dtree, children_left[root_node_id])]
-        paths_right = [[(root_node_id, '+')] + l
+        paths_right = [[(root_node_id, 'R')] + l
                  for l in all_tree_signed_paths(dtree, children_right[root_node_id])]
         paths = paths_left + paths_right
     else:
-        paths = [[]]
+        paths = [[(root_node_id, )]]
     return paths
     
 def all_tree_paths(dtree, root_node_id=0):
