@@ -899,6 +899,126 @@ cdef class RegressionCriterion(Criterion):
         for k in range(self.n_outputs):
             dest[k] = self.sum_total[k] / self.weighted_n_node_samples
 
+cdef class heterogeneity_causal(RegressionCriterion):
+    """Treatment Effect criterion.
+
+        ATE = Y1 - Y0, where Y1 is the average outcome for the treated,
+            and Y0 is the average outcome for the control.
+
+        my_impurity = var(Y|Z=1) * P(Z=1) + var(Y|Z=0) * P(Z=0)
+            where Y is outcome and Z is treatment variable, minimizing
+            my_impurity should be equivalent to maximize |ATE| with the
+            weight sqrt(N1 * N0)
+    """
+
+    cdef double node_impurity(self) nogil:
+        """Evaluate the impurity of the current node, i.e. the impurity of
+           samples[start:end]."""
+        return self.my_impurity(self.start, self.end)
+
+    cdef double ATE(self, SIZE_t start, SIZE_t end, double* computable) nogil:
+        """Helper function to compute my_impurity"""
+        cdef double out = 0.0
+        cdef SIZE_t i
+        cdef SIZE_t p
+        cdef double treat_sum = 0.0
+        cdef double treat_count = 0.0
+        cdef double control_sum = 0.0
+        cdef double control_count = 0.0
+        cdef DOUBLE_t w = 1.0
+        cdef DOUBLE_t y_i
+
+        for p in range(start, end):
+            i = self.samples[p]
+
+            if self.sample_weight != NULL:
+                w = self.sample_weight[i]
+
+            y_i = self.y[i * self.y_stride + 1]
+            if self.y[i * self.y_stride] > 0.5:  # if the unit is treated
+                treat_sum += w * y_i
+                treat_count += w
+            else:
+                control_sum += w * y_i
+                control_count += w
+        if treat_count > 1e-4 and control_count > 1e-4:
+            computable[0] = 1
+            out = treat_sum / treat_count - control_sum / control_count
+        else:
+            computable[0] = 0
+
+        return out
+
+    cdef double my_impurity(self, SIZE_t start, SIZE_t end) nogil:
+        """Helper function to compute my_impurity"""
+        cdef double impurity
+        cdef SIZE_t i
+        cdef SIZE_t p
+        cdef double treat_sum = 0.0
+        cdef double treat_sq = 0.0
+        cdef double treat_count = 0.0
+        cdef double control_sum = 0.0
+        cdef double control_sq = 0.0
+        cdef double control_count = 0.0
+        cdef double total_count = 0.0 
+        cdef DOUBLE_t w = 1.0
+        cdef DOUBLE_t y_i
+
+        for p in range(start, end):
+            i = self.samples[p]
+
+            if self.sample_weight != NULL:
+                w = self.sample_weight[i]
+
+            y_i = self.y[i * self.y_stride + 1]
+            if self.y[i * self.y_stride] > 0.5:  # if the unit is treated
+                treat_sum += w * y_i
+                treat_sq += w * y_i * y_i
+                treat_count += w
+            else:
+                control_sum += w * y_i
+                control_sq += w * y_i * y_i 
+                control_count += w
+        total_count = treat_count + control_count
+        if treat_count > 1e-4:
+            impurity = treat_count / total_count * (treat_sq / treat_count - (treat_sum / treat_count) ** 2.0)
+        if control_count > 1e-4:
+            impurity += control_count / total_count * (control_sq / control_count - (control_sum / control_count) ** 2.0) 
+
+        return impurity 
+
+    cdef double proxy_impurity_improvement(self) nogil:
+        """Compute a proxy of the impurity reduction
+
+        This method is used to speed up the search for the best split.
+        It is a proxy quantity such that the split that maximizes this value
+        also maximizes the impurity improvement. It neglects all constant terms
+        of the impurity decrease for a given split.
+
+        The absolute impurity improvement is only computed by the
+        impurity_improvement method once the best split has been found.
+        """
+        cdef double computable = 1.0
+        cdef double right_ATE = 0.0
+        cdef double left_ATE = 0.0
+        left_ATE = self.ATE(self.start, self.pos, &computable)
+        if computable < 0.5:
+            return 0.0
+        right_ATE = self.ATE(self.pos, self.end, &computable)
+        if computable < 0.5:
+            return 0.0
+        return (self.weighted_n_left * self.weighted_n_right
+                * (left_ATE - right_ATE) ** 2.0)
+
+    cdef void children_impurity(self, double* impurity_left,
+                                double* impurity_right) nogil:
+        """Evaluate the impurity in children nodes, i.e. the impurity of the
+           left child (samples[start:pos]) and the impurity the right child
+           (samples[pos:end])."""
+
+        impurity_left[0] = self.my_impurity(self.start, self.pos)
+        impurity_right[0] = self.my_impurity(self.pos, self.end)
+
 cdef class ATE(RegressionCriterion):
     """Treatment Effect criterion.
 
