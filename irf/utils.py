@@ -32,7 +32,7 @@ def get_rf_tree_data(rf, X_train, X_test, y_test, signed=False):
     # Create a dictionary with all random forest metrics
     # This currently includes the entire random forest fitted object
     all_rf_tree_outputs = {"rf_obj": rf,
-                           "get_params": rf.get_params,
+                           "get_params": rf.get_params(),
                            "rf_validation_metrics": rf_validation_metrics,
                            "feature_importances": feature_importances,
                            "feature_importances_std": feature_importances_std,
@@ -676,6 +676,6 @@ def all_tree_paths(dtree, root_node_id=0):
                  all_tree_paths(dtree, children_right[root_node_id])]
 
     else:
-        paths = [root_node_id]
+        paths = [[root_node_id]]
     return paths
 
