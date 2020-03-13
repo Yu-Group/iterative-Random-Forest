@@ -954,14 +954,6 @@ cdef class ATE(RegressionCriterion):
 
         return impurity 
 
-    cdef void node_value(self, double* dest) nogil:
-        """Compute the node value of samples[start:end] into dest."""
-
-        cdef SIZE_t k
-
-        dest[0] = 0
-        dest[1] = self.sum_total[1] / self.weighted_n_node_samples
-
     cdef double proxy_impurity_improvement(self) nogil:
         """Compute a proxy of the impurity reduction
 
@@ -973,7 +965,8 @@ cdef class ATE(RegressionCriterion):
         The absolute impurity improvement is only computed by the
         impurity_improvement method once the best split has been found.
         """
-        return self.node_impurity()
+        return (- self.weighted_n_left * self.my_impurity(self.start, self.pos)
+                - self.weighted_n_right * self.my_impurity(self.pos, self.end))
 
     cdef void children_impurity(self, double* impurity_left,
                                 double* impurity_right) nogil:
