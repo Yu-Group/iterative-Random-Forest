@@ -905,24 +905,62 @@ cdef class ATE(RegressionCriterion):
         ATE = Y1 - Y0, where Y1 is the average outcome for the treated,
             and Y0 is the average outcome for the control.
 
-        output = N1 * N0 / (N1 + N0) * ATE ** 2
-            where N1 is the number of units in the treated, N0 is the
-            number of units in the control.
+        my_impurity = var(Y|Z=1) * P(Z=1) + var(Y|Z=0) * P(Z=0)
+            where Y is outcome and Z is treatment variable, minimizing
+            my_impurity should be equivalent to maximize |ATE| with the
+            weight sqrt(N1 * N0)
     """
 
     cdef double node_impurity(self) nogil:
         """Evaluate the impurity of the current node, i.e. the impurity of
            samples[start:end]."""
+        return self.my_impurity(self.start, self.end)
 
-        cdef double* sum_total = self.sum_total
+    cdef double my_impurity(self, SIZE_t start, SIZE_t end) nogil:
+        """Helper function to compute my_impurity"""
         cdef double impurity
+        cdef SIZE_t i
+        cdef SIZE_t p
+        cdef double treat_sum = 0.0
+        cdef double treat_sq = 0.0
+        cdef double treat_count = 0.0
+        cdef double control_sum = 0.0
+        cdef double control_sq = 0.0
+        cdef double control_count = 0.0
+        cdef double total_count = 0.0 
+        cdef DOUBLE_t w = 1.0
+        cdef DOUBLE_t y_i
+
+        for p in range(start, end):
+            i = self.samples[p]
+
+            if self.sample_weight != NULL:
+                w = self.sample_weight[i]
+
+            y_i = self.y[i * self.y_stride + 1]
+            if self.y[i * self.y_stride] > 0.5:  # if the unit is treated
+                treat_sum += w * y_i
+                treat_sq += w * y_i * y_i
+                treat_count += w
+            else:
+                control_sum += w * y_i
+                control_sq += w * y_i * y_i 
+                control_count += w
+        total_count = treat_count + control_count
+        if treat_count > 1e-4:
+            impurity = treat_count / total_count * (treat_sq / treat_count - (treat_sum / treat_count) ** 2.0)
+        if control_count > 1e-4:
+            impurity += control_count / total_count * (control_sq / control_count - (control_sum / control_count) ** 2.0) 
+
+        return impurity 
+
+    cdef void node_value(self, double* dest) nogil:
+        """Compute the node value of samples[start:end] into dest."""
+
         cdef SIZE_t k
 
-        impurity = self.sq_sum_total / self.weighted_n_node_samples
-        for k in range(self.n_outputs):
-            impurity -= (sum_total[k] / self.weighted_n_node_samples)**2.0
-
-        return impurity / self.n_outputs
+        dest[0] = 0
+        dest[1] = self.sum_total[1] / self.weighted_n_node_samples
 
     cdef double proxy_impurity_improvement(self) nogil:
         """Compute a proxy of the impurity reduction
@@ -935,20 +973,7 @@ cdef class ATE(RegressionCriterion):
         The absolute impurity improvement is only computed by the
         impurity_improvement method once the best split has been found.
         """
-
-        cdef double* sum_left = self.sum_left
-        cdef double* sum_right = self.sum_right
-
-        cdef SIZE_t k
-        cdef double proxy_impurity_left = 0.0
-        cdef double proxy_impurity_right = 0.0
-
-        for k in range(self.n_outputs):
-            proxy_impurity_left += sum_left[k] * sum_left[k]
-            proxy_impurity_right += sum_right[k] * sum_right[k]
-
-        return (proxy_impurity_left / self.weighted_n_left +
-                proxy_impurity_right / self.weighted_n_right)
+        return self.node_impurity()
 
     cdef void children_impurity(self, double* impurity_left,
                                 double* impurity_right) nogil:
@@ -956,46 +981,8 @@ cdef class ATE(RegressionCriterion):
            left child (samples[start:pos]) and the impurity the right child
            (samples[pos:end])."""
 
-
-        cdef DOUBLE_t* y = self.y
-        cdef DOUBLE_t* sample_weight = self.sample_weight
-        cdef SIZE_t* samples = self.samples
-        cdef SIZE_t pos = self.pos
-        cdef SIZE_t start = self.start
-
-        cdef double* sum_left = self.sum_left
-        cdef double* sum_right = self.sum_right
-
-        cdef double sq_sum_left = 0.0
-        cdef double sq_sum_right
-
-        cdef SIZE_t i
-        cdef SIZE_t p
-        cdef SIZE_t k
-        cdef DOUBLE_t w = 1.0
-        cdef DOUBLE_t y_ik
-
-        for p in range(start, pos):
-            i = samples[p]
-
-            if sample_weight != NULL:
-                w = sample_weight[i]
-
-            for k in range(self.n_outputs):
-                y_ik = y[i * self.y_stride + k]
-                sq_sum_left += w * y_ik * y_ik
-
-        sq_sum_right = self.sq_sum_total - sq_sum_left
-
-        impurity_left[0] = sq_sum_left / self.weighted_n_left
-        impurity_right[0] = sq_sum_right / self.weighted_n_right
-
-        for k in range(self.n_outputs):
-            impurity_left[0] -= (sum_left[k] / self.weighted_n_left) ** 2.0
-            impurity_right[0] -= (sum_right[k] / self.weighted_n_right) ** 2.0
-
-        impurity_left[0] /= self.n_outputs
-        impurity_right[0] /= self.n_outputs
+        impurity_left[0] = self.my_impurity(self.start, self.pos)
+        impurity_right[0] = self.my_impurity(self.pos, self.end)
 
 cdef class MSE(RegressionCriterion):
     """Mean squared error impurity criterion.
