@@ -13,7 +13,7 @@ URL = 'https://github.com/Yu-Group/irf'
 MAINTAINER = 'Many'
 MAINTAINER_EMAIL = 'many@berkeley.edu'
 LICENSE = 'new BSD'
-VERSION = '0.2.1'
+VERSION = '0.2.3'
 
 
 def configuration(parent_package='', top_path=None):
@@ -57,5 +57,12 @@ if __name__ == "__main__":
               'Operating System :: Unix',
               'Operating System :: MacOS'
             ],
-          install_requires=["numpy", "scipy", "scikit-learn>=0.18", "cython"],
+          install_requires=[
+              "numpy",
+              "scipy",
+              "scikit-learn>=0.18",
+              "cython",
+              "pyfpgrowth",
+              "pyspark",
+          ],
           setup_requires=["cython"])

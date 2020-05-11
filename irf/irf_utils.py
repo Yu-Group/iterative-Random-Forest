@@ -475,11 +475,11 @@ def run_iRF(X_train,
             num_splits=2,
             n_estimators_bootstrap=5):
     """
-    Runs the iRF algorithm in full.
+    Runs the iRF algorithm.
 
 
     Parameters
-    --------
+    ----------
     X_train : array-like or sparse matrix, shape = [n_samples, n_features]
         Training vector, where n_samples in the number of samples and
         n_features is the number of features.
@@ -495,7 +495,6 @@ def run_iRF(X_train,
         Ground truth (correct) target values for testing.
 
     rf : RandomForestClassifierWithWeights to fit
-
 
     K : int, optional (default = 7)
         The number of iterations in iRF.
