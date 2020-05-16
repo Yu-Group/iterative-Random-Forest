@@ -900,7 +900,9 @@ cdef class RegressionCriterion(Criterion):
             dest[k] = self.sum_total[k] / self.weighted_n_node_samples
 
 cdef class heterogeneity_causal(RegressionCriterion):
-    """Treatment Effect criterion.
+    """heterogeneity treatment effect criterion.
+        This criterion is try to find splits to maximize the ATE difference
+        between left and right.
 
         ATE = Y1 - Y0, where Y1 is the average outcome for the treated,
             and Y0 is the average outcome for the control.
@@ -1021,6 +1023,8 @@ cdef class heterogeneity_causal(RegressionCriterion):
 
 cdef class ATE(RegressionCriterion):
     """Treatment Effect criterion.
+        This criterion tries to find splits that maximize ATE, which means
+        to minimize the MSE of Y given the treatment X.
 
         ATE = Y1 - Y0, where Y1 is the average outcome for the treated,
             and Y0 is the average outcome for the control.
@@ -1085,7 +1089,8 @@ cdef class ATE(RegressionCriterion):
         The absolute impurity improvement is only computed by the
         impurity_improvement method once the best split has been found.
         """
-        return (- self.weighted_n_left * self.my_impurity(self.start, self.pos)
+        return ( self.weighted_n_node_samples * self.my_impurity(self.start, self.end)
+                - self.weighted_n_left * self.my_impurity(self.start, self.pos)
                 - self.weighted_n_right * self.my_impurity(self.pos, self.end))
 
     cdef void children_impurity(self, double* impurity_left,
