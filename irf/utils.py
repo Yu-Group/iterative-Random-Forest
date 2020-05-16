@@ -307,12 +307,9 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
     """
 
     # If the object is not a scikit learn classifier then let user know
-    if not isinstance(inp_class_reg_obj, ClassifierMixin):
-        raise TypeError("input needs to be a ClassifierMixin object, \
-        you have input a {} object".format(type(inp_class_reg_obj).__name__))
-
+    is_classification = isinstance(inp_class_reg_obj, ClassifierMixin)
     # if the number of classes is not binary let the user know accordingly
-    if inp_class_reg_obj.n_classes_ != 2:
+    if is_classification and inp_class_reg_obj.n_classes_ != 2:
         raise ValueError("The number of classes for classification must \
         be binary, you currently have fit to {} \
         classes".format(inp_class_reg_obj.n_classes_))
@@ -320,88 +317,94 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
     # Get the predicted values on the validation data
     y_pred = inp_class_reg_obj.predict(X=X_test)
 
-    # CLASSIFICATION metrics calculations
+    if is_classification:
+        # CLASSIFICATION metrics calculations
 
-    # Cohen's kappa: a statistic that measures inter-annotator agreement.
-    # cohen_kappa_score = metrics.cohen_kappa_score(y1, y2[, labels, ...])
+        # Cohen's kappa: a statistic that measures inter-annotator agreement.
+        # cohen_kappa_score = metrics.cohen_kappa_score(y1, y2[, labels, ...])
 
-    # Compute Area Under the Curve (AUC) using the trapezoidal rule
-    # fpr, tpr, thresholds = metrics.roc_curve(y_true = y_true,
-    #                                          y_pred = y_pred)
-    # auc = metrics.auc(fpr, tpr)
+        # Compute Area Under the Curve (AUC) using the trapezoidal rule
+        # fpr, tpr, thresholds = metrics.roc_curve(y_true = y_true,
+        #                                          y_pred = y_pred)
+        # auc = metrics.auc(fpr, tpr)
 
-    # Compute average precision (AP) from prediction scores
-    # average_precision_score = metrics.average_precision_score(y_true =
-    # y_true, y_score)
+        # Compute average precision (AP) from prediction scores
+        # average_precision_score = metrics.average_precision_score(y_true =
+        # y_true, y_score)
 
-    # Compute the Brier score.
-    # metrics.brier_score_loss(y_true = y_true, y_prob[, ...])
+        # Compute the Brier score.
+        # metrics.brier_score_loss(y_true = y_true, y_prob[, ...])
 
-    # Compute the F-beta score
-    # metrics.fbeta_score(y_true = y_true, y_pred = y_pred, beta[, ...])
+        # Compute the F-beta score
+        # metrics.fbeta_score(y_true = y_true, y_pred = y_pred, beta[, ...])
 
-    # Average hinge loss (non-regularized)
-    # metrics.hinge_loss(y_true = y_true, pred_decision[, ...])
+        # Average hinge loss (non-regularized)
+        # metrics.hinge_loss(y_true = y_true, pred_decision[, ...])
 
-    # Compute the Matthews correlation coefficient (MCC) for binary classes
-    # metrics.matthews_corrcoef(y_true = y_true, y_pred[, ...])
+        # Compute the Matthews correlation coefficient (MCC) for binary classes
+        # metrics.matthews_corrcoef(y_true = y_true, y_pred[, ...])
 
-    # Compute precision-recall pairs for different probability thresholds
-    # metrics.precision_recall_curve(y_true = y_true, ...)
+        # Compute precision-recall pairs for different probability thresholds
+        # metrics.precision_recall_curve(y_true = y_true, ...)
 
-    # Compute precision, recall, F-measure and support for each class
-    # metrics.precision_recall_fscore_support(...)
+        # Compute precision, recall, F-measure and support for each class
+        # metrics.precision_recall_fscore_support(...)
 
-    # Compute Area Under the Curve (AUC) from prediction scores
-    # metrics.roc_auc_score(y_true = y_true, y_score[, ...])
+        # Compute Area Under the Curve (AUC) from prediction scores
+        # metrics.roc_auc_score(y_true = y_true, y_score[, ...])
 
-    # Compute Receiver operating characteristic (ROC)
-    # metrics.roc_curve(y_true = y_true, y_score[, ...])
+        # Compute Receiver operating characteristic (ROC)
+        # metrics.roc_curve(y_true = y_true, y_score[, ...])
 
-    # Jaccard similarity coefficient score
-    # jaccard_similarity_score =
-    # metrics.jaccard_similarity_score(y_true = y_true, y_pred = y_pred)
+        # Jaccard similarity coefficient score
+        # jaccard_similarity_score =
+        # metrics.jaccard_similarity_score(y_true = y_true, y_pred = y_pred)
 
-    # Compute the F1 score, also known as balanced F-score or F-measure
-    f1_score = metrics.f1_score(y_true=y_true, y_pred=y_pred)
+        # Compute the F1 score, also known as balanced F-score or F-measure
+        f1_score = metrics.f1_score(y_true=y_true, y_pred=y_pred)
 
-    # Compute the average Hamming loss.
-    hamming_loss = metrics.hamming_loss(y_true=y_true, y_pred=y_pred)
+        # Compute the average Hamming loss.
+        hamming_loss = metrics.hamming_loss(y_true=y_true, y_pred=y_pred)
 
-    # Log loss, aka logistic loss or cross-entropy loss.
-    log_loss = metrics.log_loss(y_true=y_true, y_pred=y_pred)
+        # Log loss, aka logistic loss or cross-entropy loss.
+        log_loss = metrics.log_loss(y_true=y_true, y_pred=y_pred)
 
-    # Compute the precision
-    precision_score = metrics.precision_score(y_true=y_true, y_pred=y_pred)
+        # Compute the precision
+        precision_score = metrics.precision_score(y_true=y_true, y_pred=y_pred)
 
-    # Compute the recall
-    recall_score = metrics.recall_score(y_true=y_true, y_pred=y_pred)
+        # Compute the recall
+        recall_score = metrics.recall_score(y_true=y_true, y_pred=y_pred)
 
-    # Accuracy classification score
-    accuracy_score = metrics.accuracy_score(y_true=y_true, y_pred=y_pred)
+        # Accuracy classification score
+        accuracy_score = metrics.accuracy_score(y_true=y_true, y_pred=y_pred)
 
-    # Build a text report showing the main classification metrics
-    # classification_report = metrics.classification_report(
-    # y_true=y_true, y_pred=y_pred)
+        # Build a text report showing the main classification metrics
+        # classification_report = metrics.classification_report(
+        # y_true=y_true, y_pred=y_pred)
 
-    # Compute confusion matrix to evaluate the accuracy of a classification
-    confusion_matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred)
+        # Compute confusion matrix to evaluate the accuracy of a classification
+        confusion_matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred)
 
-    # Zero-one classification loss.
-    zero_one_loss = metrics.zero_one_loss(y_true=y_true, y_pred=y_pred)
+        # Zero-one classification loss.
+        zero_one_loss = metrics.zero_one_loss(y_true=y_true, y_pred=y_pred)
 
-    # Load all metrics into a single dictionary
-    classification_metrics = {"hamming_loss": hamming_loss,
-                              "log_loss": log_loss,
-                              "recall_score": recall_score,
-                              "precision_score": precision_score,
-                              "accuracy_score": accuracy_score,
-                              "f1_score": f1_score,
-                              # "classification_report": classification_report,
-                              "confusion_matrix": confusion_matrix,
-                              "zero_one_loss": zero_one_loss}
+        # Load all metrics into a single dictionary
+        classification_metrics = {"hamming_loss": hamming_loss,
+                                  "log_loss": log_loss,
+                                  "recall_score": recall_score,
+                                  "precision_score": precision_score,
+                                  "accuracy_score": accuracy_score,
+                                  "f1_score": f1_score,
+                                  # "classification_report": classification_report,
+                                  "confusion_matrix": confusion_matrix,
+                                  "zero_one_loss": zero_one_loss}
 
-    return classification_metrics
+        return classification_metrics
+    else:
+        return {
+            "mse_loss":metrics.mean_squared_error(y_true=y_true, y_pred=y_pred),
+            "mae_loss":metrics.mean_absolute_error(y_true=y_true, y_pred=y_pred),
+        }
 
 
 def compute_impurity_decrease(dtree):
