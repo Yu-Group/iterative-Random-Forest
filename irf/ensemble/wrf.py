@@ -85,7 +85,7 @@ class wrf_reg(RandomForestRegressorWithWeights): # Hue: change the name so that 
             if keep_record:
                 self.all_K_iter_rf_data["rf_iter{}".format(k+1)] = get_rf_tree_data(
                         rf=self,
-                        X_train=X_train,
-                        X_test=X_test,
-                        y_test=y_test)
+                        X_train=X,
+                        X_test=X,
+                        y_test=y)
         return self

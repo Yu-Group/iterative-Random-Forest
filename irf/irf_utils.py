@@ -115,7 +115,7 @@ def _dtree_filter_comp(dtree_data,
     # perform the filtering and return list
     return [i for i, j in zip(dtree_values,
                               leaf_node_classes)
-            if j == bin_class_type]
+            if bin_class_type is None or j == bin_class_type]
 
 
 def filter_leaves_classifier(dtree_data,
@@ -181,6 +181,8 @@ def weighted_random_choice(values, weights):
     """
     if not len(weights) == len(values):
         raise ValueError('Equal number of values and weights expected')
+    if len(weights) == 0:
+        raise ValueError("weights has zero length.")
 
     weights = np.array(weights)
     # normalize the weights
@@ -463,10 +465,12 @@ def run_iRF(X_train,
             y_train,
             y_test,
             rf,
+            rf_bootstrap=None,
             initial_weights = None,
             K=7,
             B=10,
             random_state_classifier=2018,
+            signed=False,
             propn_n_samples=0.2,
             bin_class_type=1,
             M=4,
@@ -496,6 +500,9 @@ def run_iRF(X_train,
 
     rf : RandomForestClassifierWithWeights to fit
 
+    rf_bootstrap : RandomForest model to fit to the bootstrap samples, optional
+        default None, which means the same as rf
+
     K : int, optional (default = 7)
         The number of iterations in iRF.
 
@@ -504,6 +511,9 @@ def run_iRF(X_train,
 
     B : int, optional (default = 10)
         The number of bootstrap samples
+
+    signed : bool, optional (default = False)
+        Whether use signed interaction or not
 
     random_state_classifier : int, optional (default = 2018)
         The random seed for reproducibility.
@@ -596,7 +606,8 @@ def run_iRF(X_train,
 
         # Set up the weighted random forest
         # Using the weight from the (K-1)th iteration i.e. RF(w(K))
-        rf_bootstrap = clone(rf)
+        if rf_bootstrap is None:
+            rf_bootstrap = clone(rf)
         
         # CHECK: different number of trees to fit for bootstrap samples
         rf_bootstrap.n_estimators=n_estimators_bootstrap
@@ -613,7 +624,8 @@ def run_iRF(X_train,
             rf=rf_bootstrap,
             X_train=X_train_rsmpl,
             X_test=X_test,
-            y_test=y_test)
+            y_test=y_test,
+            signed=signed)
 
         # Update the rf bootstrap output dictionary
         all_rf_bootstrap_output['rf_bootstrap{}'.format(b)] = all_rf_tree_data
