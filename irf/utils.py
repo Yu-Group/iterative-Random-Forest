@@ -560,9 +560,9 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False,
                 samplesize_per_node = dtree_or_rf.tree_.weighted_n_node_samples
                 weight = [samplesize_per_node[path[-1]] for path in tree_paths]
             elif weight_scheme == 'label':
-                weight = None
+                raise NotImplementedError("this has not been implemented yet.")
             else:
-                weight = None 
+                raise ValueError("weight scheme is not allowed.")
         else:
             tree_paths = all_tree_paths(dtree_or_rf)
             feature_paths = []
