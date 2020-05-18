@@ -555,12 +555,10 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False,
                         cache.add(k[0])
                 feature_paths.append(cleaned)
             if weight_scheme == 'depth':
-                weight = [2 ** (-len(path)) for path in tree_paths]
+                weight = [2 ** (1-len(path)) for path in tree_paths]
             elif weight_scheme == 'samplesize':
                 samplesize_per_node = dtree_or_rf.tree_.weighted_n_node_samples
                 weight = [samplesize_per_node[path[-1]] for path in tree_paths]
-                total = sum(weight)
-                weight = [w / total for w in weight]
             elif weight_scheme == 'label':
                 weight = None
             else:
@@ -571,7 +569,9 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False,
             for path in tree_paths:
                 feature_paths.append(list(set([features[x] for x in path if filtered[x]])))
             weight = [2 ** (1-len(path)) for path in tree_paths]    
-        
+        # make sure the weight sums up to 1.
+        total = sum(weight)
+        weight = [w / total for w in weight]
         return feature_paths, weight
     elif hasattr(dtree_or_rf, 'estimators_'):
         all_fs = []
