@@ -430,7 +430,25 @@ def compute_impurity_decrease(dtree):
 
 def visualize_impurity_decrease(dtree_or_rf, yscale='log', xscale='log', **kwargs):
     ''' 
-    Visualize the impurity decrease at each node
+    Visualize the impurity decrease at each node.
+    
+    Parameters
+    ----------
+
+    dtree_or_rf : random forest or decision tree
+
+    yscale : str, log or linear, optional with default log
+        The yscale parameter in the histogram plot.
+
+    xscale : str, log or linear, optional with default log
+        The xscale, if log, the x axis will be the log10 of impurity decrease
+
+    kwargs : other parameters that go into the hist plot
+
+    Returns
+    -------
+
+    None
     '''
     out = []
     if hasattr(dtree_or_rf, 'tree_'):
@@ -442,14 +460,45 @@ def visualize_impurity_decrease(dtree_or_rf, yscale='log', xscale='log', **kwarg
             out = out + [x for x in impurity_decrease if x >= 0]
     else:
         print("cannot recognize the input")
+    if xscale == 'log':
+        out = [np.log10(x) for x in out if x > 0]
+    elif xscale != 'linear':
+        print("cannot recognize xscale (%s)".format(xscale)
+            + ", only take log or linear. using linear.")
     plt.hist(out, **kwargs)
     plt.yscale(yscale)
-    plt.xscale(xscale)
     plt.show()
 
-def get_prevalent_interactions(rf, impurity_decrease_threshold, min_support=10, signed=False):
+def get_prevalent_interactions(
+        rf,
+        impurity_decrease_threshold,
+        min_support=10,
+        signed=False,
+    ):
     '''
     Compute the prevalent interactions and their prevalence
+        First, we use FP growth to find a series of candidate interactions.
+        Second, we compute the weighted prevalence of each candidate.
+    
+    Parameters
+    ----------
+
+    rf : the random forest model
+
+    impurity_decrease_threshold : float, if a split results in a decrease
+        smaller than this parameter, then it will not appear in the path.
+        If it is unclear how to select this for a rf, use visualize_impurity
+        _decrease function to look at the histogram of impurity decrease for
+        all the splits.
+
+    min_support : int, optional with default 10,
+        the minimum number of paths a interaction must appear to be considered
+
+    Returns
+    -------
+
+    prevalence : dictionary, key correspond to patterns and values correspond
+        to their weights.
     '''
     feature_paths, weight = get_filtered_feature_paths(rf, impurity_decrease_threshold, signed=signed)
     feature_paths = [list(path) for path in feature_paths]
