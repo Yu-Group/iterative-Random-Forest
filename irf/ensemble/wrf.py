@@ -7,6 +7,14 @@ from ..tree.tree import (WeightedDecisionTreeClassifier,
 from ..utils import get_rf_tree_data
 
 class RandomForestClassifierWithWeights(RandomForestClassifier):
+    @property
+    def n_paths(self):
+        if not hasattr(rf, "estimators_"):
+            return 0
+        out = 0
+        for tree in rf.estimators_:
+            out += np.sum(tree.tree_.feature == -2)
+        return out
     def fit(self, X, y, sample_weight=None, feature_weight=None):
         if feature_weight is not None:
             self.base_estimator = WeightedDecisionTreeClassifier()
@@ -15,6 +23,14 @@ class RandomForestClassifierWithWeights(RandomForestClassifier):
         return super(RandomForestClassifierWithWeights, self).fit(X, y, sample_weight)
 
 class RandomForestRegressorWithWeights(RandomForestRegressor):
+    @property
+    def n_paths(self):
+        if not hasattr(rf, "estimators_"):
+            return 0
+        out = 0
+        for tree in rf.estimators_:
+            out += np.sum(tree.tree_.feature == -2)
+        return out
     def fit(self, X, y, sample_weight=None, feature_weight=None):
         if feature_weight is not None:
             self.base_estimator = WeightedDecisionTreeRegressor()
