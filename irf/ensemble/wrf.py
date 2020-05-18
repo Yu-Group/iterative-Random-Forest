@@ -5,6 +5,7 @@ from abc import ABCMeta, abstractmethod
 from ..tree.tree import (WeightedDecisionTreeClassifier, 
                          WeightedDecisionTreeRegressor)
 from ..utils import get_rf_tree_data
+import numpy as np
 
 class RandomForestClassifierWithWeights(RandomForestClassifier):
     @property
