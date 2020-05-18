@@ -6,6 +6,7 @@ from sklearn.tree import _tree
 from sklearn.base import ClassifierMixin
 import matplotlib.pyplot as plt
 import pyfpgrowth
+from collections import OrderedDict
 
 # Get all RF and decision tree data
 
@@ -510,6 +511,9 @@ def get_prevalent_interactions(
         for path, w in zip(feature_paths, weight):
             if p.issubset(path):
                 prevalence[key] += w
+    prevalence = OrderedDict(
+        sorted(prevalence.items(), key=lambda t: -t[1] ** (1/len(t[0]))),
+    )
     return prevalence
         
 from matplotlib.ticker import MaxNLocator
