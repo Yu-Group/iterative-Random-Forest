@@ -474,6 +474,7 @@ def get_prevalent_interactions(
         rf,
         impurity_decrease_threshold,
         min_support=10,
+        weight_scheme="depth",
         signed=False,
     ):
     '''
@@ -495,13 +496,21 @@ def get_prevalent_interactions(
     min_support : int, optional with default 10,
         the minimum number of paths a interaction must appear to be considered
 
+    weight_scheme : str, ["depth", "samplesize"],
+        how to compute the weight
+
     Returns
     -------
 
     prevalence : dictionary, key correspond to patterns and values correspond
         to their weights.
     '''
-    feature_paths, weight = get_filtered_feature_paths(rf, impurity_decrease_threshold, signed=signed)
+    feature_paths, weight = get_filtered_feature_paths(
+        rf,
+        impurity_decrease_threshold,
+        signed=signed,
+        weight_scheme=weight_scheme,
+    )
     feature_paths = [list(path) for path in feature_paths]
     patterns = pyfpgrowth.find_frequent_patterns(feature_paths, min_support)
     #print(feature_paths)
@@ -572,7 +581,13 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False,
             feature_paths = []
             for path in tree_paths:
                 feature_paths.append(list(set([features[x] for x in path if filtered[x]])))
-            weight = [2 ** (1-len(path)) for path in tree_paths]    
+            if weight_scheme == 'depth':
+                weight = [2 ** (1-len(path)) for path in tree_paths]
+            elif weight_scheme == 'samplesize':
+                samplesize_per_node = dtree_or_rf.tree_.weighted_n_node_samples
+                weight = [samplesize_per_node[path[-1]] for path in tree_paths]
+            else:
+                raise ValueError("weight scheme is not allowed.")
         # make sure the weight sums up to 1.
         total = sum(weight)
         weight = [w / total for w in weight]
@@ -581,7 +596,7 @@ def get_filtered_feature_paths(dtree_or_rf, threshold, signed=False,
         all_fs = []
         all_ws = []
         for tree in dtree_or_rf.estimators_:
-            feature_paths, weight = get_filtered_feature_paths(tree, threshold, signed)
+            feature_paths, weight = get_filtered_feature_paths(tree, threshold, signed, weight_scheme)
             all_fs += feature_paths
             all_ws += [w / dtree_or_rf.n_estimators for w in weight]
         return all_fs, all_ws
