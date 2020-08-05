@@ -3,8 +3,8 @@
 # iterative Random Forest
 The algorithm details are available at: 
 
-Sumanta Basu, Karl Kumbier, James B. Brown, Bin Yu,  Iterative Random Forests to detect predictive and stable high-order interactions, 
-<https://arxiv.org/abs/1706.08457>
+Sumanta Basu, Karl Kumbier, James B. Brown, Bin Yu,  Iterative Random Forests to detect predictive and stable high-order interactions, PNAS
+<https://www.pnas.org/content/115/8/1943>
 
 The implementation is a joint effort of several people in UC Berkeley. See the [Authors.md](Authors.md) for the complete list.
 The weighted random forest implementation is based on the random forest source code and API design from [scikit-learn](http://scikit-learn.org/stable/index.html), details can be found in *API design for machine learning software: experiences from the scikit-learn project, Buitinck et al., 2013.*. The setup file is based on the setup file from [skgarden](https://github.com/scikit-garden/scikit-garden/tree/master/skgarden). 
