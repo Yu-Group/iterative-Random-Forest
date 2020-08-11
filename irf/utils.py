@@ -7,6 +7,9 @@ from sklearn.base import ClassifierMixin
 import matplotlib.pyplot as plt
 import pyfpgrowth
 from collections import OrderedDict
+from itertools import groupby
+from operator import itemgetter
+
 
 # Get all RF and decision tree data
 
@@ -476,6 +479,7 @@ def get_prevalent_interactions(
         min_support=10,
         weight_scheme="depth",
         signed=False,
+        mask=None,
     ):
     '''
     Compute the prevalent interactions and their prevalence
@@ -499,6 +503,10 @@ def get_prevalent_interactions(
     weight_scheme : str, ["depth", "samplesize"],
         how to compute the weight
 
+    mask : dict, default None
+        this stores the name of each feature. Features with the same name are
+        treated as the same.
+
     Returns
     -------
 
@@ -512,6 +520,16 @@ def get_prevalent_interactions(
         weight_scheme=weight_scheme,
     )
     feature_paths = [list(path) for path in feature_paths]
+    if mask is not None:
+        if isinstance(feature_paths[0][0], tuple):
+            ff = lambda x: list(set([(mask[elem[0]], elem[1]) for elem in x]))
+        else:
+            ff = lambda x: list(set([mask[elem] for elem in x]))
+        feature_paths = [ff(x) for x in feature_paths]
+        #def my_reduce(obj1, obj2):
+        #    return (obj1[0],obj1[1] + obj2[1])
+        #feature_paths = [reduce(my_reduce, group)
+        #       for _, group in groupby(sorted(feature_paths), key=itemgetter(0))]
     patterns = pyfpgrowth.find_frequent_patterns(feature_paths, min_support)
     #print(feature_paths)
     prevalence = {p:0 for p in patterns}
@@ -523,6 +541,7 @@ def get_prevalent_interactions(
     prevalence = OrderedDict(
         sorted(prevalence.items(), key=lambda t: -t[1] ** (1/len(t[0]))),
     )
+
     return prevalence
         
 from matplotlib.ticker import MaxNLocator
