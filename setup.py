@@ -13,7 +13,7 @@ URL = 'https://github.com/Yu-Group/irf'
 MAINTAINER = 'Many'
 MAINTAINER_EMAIL = 'many@berkeley.edu'
 LICENSE = 'new BSD'
-VERSION = '0.2.3'
+VERSION = '0.2.4'
 
 
 def configuration(parent_package='', top_path=None):
