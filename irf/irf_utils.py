@@ -15,9 +15,9 @@ from .utils import get_rf_tree_data
 
 # Needed for the scikit-learn wrapper function
 from sklearn.utils import resample
-from .ensemble import (RandomForestClassifierWithWeights,
-                       RandomForestRegressorWithWeights,
-                       wrf, wrf_reg)
+from sklearn.ensemble import (RandomForestClassifier,
+                              RandomForestRegressor)
+from .ensemble import (wrf, wrf_reg)
 
 from math import ceil
 
@@ -498,7 +498,8 @@ def run_iRF(X_train,
     y_test : 1d array-like, or label indicator array / sparse matrix
         Ground truth (correct) target values for testing.
 
-    rf : RandomForestClassifierWithWeights to fit
+    rf : RandomForestClassifier/Regressor to fit, it will not be used directly
+        Only the parameters of rf will be used.
 
     rf_bootstrap : RandomForest model to fit to the bootstrap samples, optional
         default None, which means the same as rf
@@ -577,9 +578,9 @@ def run_iRF(X_train,
     all_rit_bootstrap_output = {}
     
     
-    if type(rf) is RandomForestClassifierWithWeights:
+    if issubclass(type(rf), RandomForestClassifier):
         weightedRF = wrf(**rf.get_params())
-    elif type(rf) is RandomForestRegressorWithWeights:
+    elif issubclass(type(rf), RandomForestRegressor):
         weightedRF = wrf_reg(**rf.get_params())
     else:
         raise ValueError('the type of rf cannot be {}'.format(type(rf)))
@@ -758,9 +759,9 @@ def run_iRF_FPGrowth(X_train,
     # Initialize dictionary of bootstrap FP-Growth output
     all_FP_Growth_bootstrap_output = {}
     
-    if type(rf) is RandomForestClassifierWithWeights:
+    if issubclass(type(rf), RandomForestClassifier):
         weightedRF = wrf(**rf.get_params())
-    elif type(rf) is RandomForestRegressorWithWeights:
+    elif issubclass(type(rf) is RandomForestRegressor):
         weightedRF = wrf_reg(**rf.get_params())
     else:
         raise ValueError('the type of rf cannot be {}'.format(type(rf)))
