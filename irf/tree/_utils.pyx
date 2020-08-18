@@ -102,7 +102,7 @@ cdef SIZE_t weighted_sampling(SIZE_t* feature_ind, DOUBLE_t* feature_weight,
          i = low
          key = rand_uniform(0, prob_sum, random_state)
          step = 0
-         while step < key:
+         while step <= key and i < high + jump:
              if i == head:
                  i += jump
              step += feature_weight[feature_ind[i]]
