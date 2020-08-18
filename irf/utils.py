@@ -480,6 +480,7 @@ def get_prevalent_interactions(
         weight_scheme="depth",
         signed=False,
         mask=None,
+        adjust_for_weights=False,
     ):
     '''
     Compute the prevalent interactions and their prevalence
@@ -507,6 +508,12 @@ def get_prevalent_interactions(
         this stores the name of each feature. Features with the same name are
         treated as the same.
 
+    adjust_for_weights : bool, default False,
+        whether adjust for weights for fpgrowth. Since fpgrowth does not allow
+        weights for each path, that created some difficulty in selecting a
+        threshold for fpgrowth when trees are very imbalanced. This parameter
+        helps alleviate that issue by adjusting the input to fpgrowth using
+        weights.
     Returns
     -------
 
@@ -530,7 +537,13 @@ def get_prevalent_interactions(
         #    return (obj1[0],obj1[1] + obj2[1])
         #feature_paths = [reduce(my_reduce, group)
         #       for _, group in groupby(sorted(feature_paths), key=itemgetter(0))]
-    patterns = pyfpgrowth.find_frequent_patterns(feature_paths, min_support)
+    if adjust_for_weights:
+        resampled_paths = []
+        for path, w in zip(feature_paths, weight):
+            resampled_paths += [path] * np.random.poisson(len(feature_paths) * w)
+        patterns = pyfpgrowth.find_frequent_patterns(resampled_paths, min_support)
+    else:
+        patterns = pyfpgrowth.find_frequent_patterns(feature_paths, min_support)
     #print(feature_paths)
     prevalence = {p:0 for p in patterns}
     for key in patterns:
