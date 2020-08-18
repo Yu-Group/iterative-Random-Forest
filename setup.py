@@ -13,7 +13,7 @@ URL = 'https://github.com/Yu-Group/irf'
 MAINTAINER = 'Many'
 MAINTAINER_EMAIL = 'many@berkeley.edu'
 LICENSE = 'new BSD'
-VERSION = '0.2.4'
+VERSION = '0.2.5'
 
 
 def configuration(parent_package='', top_path=None):
@@ -64,5 +64,7 @@ if __name__ == "__main__":
               "cython",
               "pyfpgrowth",
               "pyspark",
+              "pyyaml==5.3.1",
+              "pydotplus==2.0.2",
           ],
           setup_requires=["cython"])
