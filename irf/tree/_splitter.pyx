@@ -415,7 +415,6 @@ cdef class BestSplitter(BaseDenseSplitter):
                 f_j = weighted_sampling(self.features, self.feature_weight, 
                                         n_known_constants, n_found_constants,
                                         n_drawn_constants, f_i - n_found_constants, random_state)
-
             if f_j < n_known_constants:
                 # f_j in the interval [n_drawn_constants, n_known_constants[
                 tmp = features[f_j]
@@ -450,8 +449,7 @@ cdef class BestSplitter(BaseDenseSplitter):
                         Xf[i] = X[self.X_sample_stride * samples[i] + feature_offset]
 
                     sort(Xf + start, samples + start, end - start)
-
-                if Xf[end - 1] <= Xf[start] + FEATURE_THRESHOLD or self.feature_weight[features[f_j]] == 0:
+                if Xf[end - 1] <= Xf[start] + FEATURE_THRESHOLD or (self.feature_weight != NULL and self.feature_weight[features[f_j]] == 0):
                     features[f_j] = features[n_total_constants]
                     features[n_total_constants] = current.feature
 
