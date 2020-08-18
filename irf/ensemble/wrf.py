@@ -17,9 +17,11 @@ class RandomForestClassifierWithWeights(RandomForestClassifier):
             out += np.sum(tree.tree_.feature == -2)
         return out
     def fit(self, X, y, sample_weight=None, feature_weight=None):
+        self.base_estimator = WeightedDecisionTreeClassifier()
+        self.base_estimator_ = WeightedDecisionTreeClassifier()
         if feature_weight is not None:
-            self.base_estimator = WeightedDecisionTreeClassifier()
             self.base_estimator.feature_weight = feature_weight
+            self.base_estimator_.feature_weight = feature_weight
             
         return super(RandomForestClassifierWithWeights, self).fit(X, y, sample_weight)
 
@@ -33,9 +35,11 @@ class RandomForestRegressorWithWeights(RandomForestRegressor):
             out += np.sum(tree.tree_.feature == -2)
         return out
     def fit(self, X, y, sample_weight=None, feature_weight=None):
+        self.base_estimator = WeightedDecisionTreeRegressor()
+        self.base_estimator_ = WeightedDecisionTreeRegressor()
         if feature_weight is not None:
-            self.base_estimator = WeightedDecisionTreeRegressor()
-            self.base_estimator.feature_weight = feature_weight
+            self.base_estimator_.feature_weight = np.array(feature_weight).copy()
+            self.base_estimator.feature_weight = np.array(feature_weight).copy()
 
         return super(RandomForestRegressorWithWeights, self).fit(X, y, sample_weight)
         
