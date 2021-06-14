@@ -1,4 +1,5 @@
 *.py[co]
+.eggs
 *~
 .ipynb_checkpoints/
 # created by installing scikit-learn from git

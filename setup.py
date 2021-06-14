@@ -64,7 +64,6 @@ if __name__ == "__main__":
               "cython",
               "pyfpgrowth",
               "pyspark",
-              "pyyaml==5.3.1",
               "pydotplus==2.0.2",
           ],
           setup_requires=["cython"])

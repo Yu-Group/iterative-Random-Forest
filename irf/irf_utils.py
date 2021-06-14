@@ -168,7 +168,6 @@ def filter_leaves_classifier(dtree_data,
 
     return all_filtered_outputs
 
-
 def weighted_random_choice(values, weights):
     """
     Discrete distribution, drawing values with the frequency
@@ -207,11 +206,15 @@ def generate_rit_samples(all_rf_tree_data, bin_class_type=1):
     all_weights = []
     all_paths = []
     for dtree in range(n_estimators):
-        filtered = filter_leaves_classifier(
-            dtree_data=all_rf_tree_data['dtree{}'.format(dtree)],
-            bin_class_type=bin_class_type)
-        all_weights.extend(filtered['tot_leaf_node_values'])
-        all_paths.extend(filtered['uniq_feature_paths'])
+        if bin_class_type is not None:
+            filtered = filter_leaves_classifier(
+                dtree_data=all_rf_tree_data['dtree{}'.format(dtree)],
+                bin_class_type=bin_class_type)
+            all_weights.extend(filtered['tot_leaf_node_values'])
+            all_paths.extend(filtered['uniq_feature_paths'])
+        else:
+            all_weights.extend(all_rf_tree_data['dtree{}'.format(dtree)]['all_leaf_node_samples_percent'])
+            all_paths.extend(all_rf_tree_data['dtree{}'.format(dtree)]['all_uniq_leaf_paths_features'])
 
     # Return the generator of randomly sampled observations
     # by specified weights

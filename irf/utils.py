@@ -118,8 +118,8 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0, signed=False):
     max_node_depth = dtree.tree_.max_depth
     n_nodes = dtree.tree_.node_count
     value = dtree.tree_.value
-    n_node_samples = dtree.tree_.n_node_samples
-    root_n_node_samples = float(dtree.tree_.n_node_samples[0])
+    n_node_samples = dtree.tree_.weighted_n_node_samples
+    root_n_node_samples = float(dtree.tree_.weighted_n_node_samples[0])
     X_train_n_samples = X_train.shape[0]
 
     # Get the total number of features in the training data
@@ -552,7 +552,8 @@ def get_prevalent_interactions(
             if p.issubset(path):
                 prevalence[key] += w
     prevalence = OrderedDict(
-        sorted(prevalence.items(), key=lambda t: -t[1] ** (1/len(t[0]))),
+        sorted(prevalence.items(),
+        key=lambda t: -t[1] ** (1/len(t[0])),)
     )
 
     return prevalence
