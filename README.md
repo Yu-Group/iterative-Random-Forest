@@ -10,43 +10,8 @@ The implementation is a joint effort of several people in UC Berkeley. See the [
 The weighted random forest implementation is based on the random forest source code and API design from [scikit-learn](http://scikit-learn.org/stable/index.html), details can be found in *API design for machine learning software: experiences from the scikit-learn project, Buitinck et al., 2013.*. The setup file is based on the setup file from [skgarden](https://github.com/scikit-garden/scikit-garden/tree/master/skgarden). 
 
 ## Installation
-### Dependencies
-The irf package requires 
+To install, simply run `pip install irf`. If you run into any issues, see [installation help](installation.md).
 
-- Python (>= 3.3)
-- Numpy (>= 1.8.2)
-- Scipy (>= 0.13.3)
-- Cython
-- pydotplus
-- matplotlib 
-- jupyter 
-- pyyaml
-- scikit-learn (>= 0.22)
-
-Before the installation, please make sure you installed the above python packages correctly via pip:
-```bash
-pip install cython numpy scikit-learn pydotplus jupyter pyyaml matplotlib
-```
-### Basic setup and installation
-
-Installing irf package is simple. Just clone this repo and use pip install.
-```bash
-git clone https://github.com/Yu-Group/iterative-Random-Forest
-```
-
-Then go to the `iterative-Random-Forest` folder and use pip install:
-```bash
-pip install -e .
-```
-If irf is installed successfully, you should be able to see it using pip list:
-```bash
-pip list | grep irf
-```
-and you should be able to run all the tests (assume the working directory is in the package iterative-Random-Forest):
-```bash
-python irf/tests/test_irf_utils.py
-python irf/tests/test_irf_weighted.py
-```
 ## A simple demo
 In order to use irf, you need to import it in python.
 
