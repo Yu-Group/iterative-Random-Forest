@@ -22,6 +22,8 @@ import warnings
 from abc import ABCMeta
 from abc import abstractmethod
 from math import ceil
+from pkg_resources import get_distribution
+from packaging.version import parse
 
 import numpy as np
 from scipy.sparse import issparse
@@ -69,6 +71,9 @@ DENSE_SPLITTERS = {"best": _splitter.BestSplitter,
 SPARSE_SPLITTERS = {"best": _splitter.BestSparseSplitter,
                     "random": _splitter.RandomSparseSplitter}
 
+SKLEARN_VERSION = parse(get_distribution("scikit-learn").version)
+
+
 # =============================================================================
 # Base decision tree
 # =============================================================================
@@ -101,7 +106,7 @@ class TreeWeightsMixin(BaseDecisionTree):
                                      "sparse matrices")
 
         # Determine output settings
-        n_samples, self.n_features_ = X.shape
+        n_samples, self.n_features_in_ = X.shape
         is_classification = isinstance(self, ClassifierMixin)
 
         y = np.atleast_1d(y)
@@ -180,25 +185,25 @@ class TreeWeightsMixin(BaseDecisionTree):
         if isinstance(self.max_features, str):
             if self.max_features == "auto":
                 if is_classification:
-                    max_features = max(1, int(np.sqrt(self.n_features_)))
+                    max_features = max(1, int(np.sqrt(self.n_features_in_)))
                 else:
-                    max_features = self.n_features_
+                    max_features = self.n_features_in_
             elif self.max_features == "sqrt":
-                max_features = max(1, int(np.sqrt(self.n_features_)))
+                max_features = max(1, int(np.sqrt(self.n_features_in_)))
             elif self.max_features == "log2":
-                max_features = max(1, int(np.log2(self.n_features_)))
+                max_features = max(1, int(np.log2(self.n_features_in_)))
             else:
                 raise ValueError(
                     'Invalid value for max_features. Allowed string '
                     'values are "auto", "sqrt" or "log2".')
         elif self.max_features is None:
-            max_features = self.n_features_
+            max_features = self.n_features_in_
         elif isinstance(self.max_features, (numbers.Integral, np.integer)):
             max_features = self.max_features
         else:  # float
             if self.max_features > 0.0:
                 max_features = max(1,
-                                   int(self.max_features * self.n_features_))
+                                   int(self.max_features * self.n_features_in_))
             else:
                 max_features = 0
 
@@ -211,7 +216,7 @@ class TreeWeightsMixin(BaseDecisionTree):
             raise ValueError("min_weight_fraction_leaf must in [0, 0.5]")
         if max_depth <= 0:
             raise ValueError("max_depth must be greater than zero. ")
-        if not (0 < max_features <= self.n_features_):
+        if not (0 < max_features <= self.n_features_in_):
             raise ValueError("max_features must be in (0, n_features]")
         if not isinstance(max_leaf_nodes, (numbers.Integral, np.integer)):
             raise ValueError("max_leaf_nodes must be integral number but was "
@@ -243,10 +248,10 @@ class TreeWeightsMixin(BaseDecisionTree):
                 raise ValueError("Feature weights array has more "
                                  "than one dimension: %d" %
                                  len(feature_weight.shape))
-            if len(feature_weight) != self.n_features_:
+            if len(feature_weight) != self.n_features_in_:
                 raise ValueError("Number of weights=%d does not match "
                                  "number of features=%d" %
-                                 (len(feature_weight), self.n_features_))
+                                 (len(feature_weight), self.n_features_in_))
 
         if expanded_class_weight is not None:
             if sample_weight is not None:
@@ -329,9 +334,9 @@ class TreeWeightsMixin(BaseDecisionTree):
                                                 random_state,
                                                 self.presort)
         if is_classification:
-            self.tree_ = Tree(self.n_features_, self.n_classes_, self.n_outputs_)
+            self.tree_ = Tree(self.n_features_in_, self.n_classes_, self.n_outputs_)
         else:
-            self.tree_ = Tree(self.n_features_, 
+            self.tree_ = Tree(self.n_features_in_,
                               np.array([1] * self.n_outputs_, dtype=np.intp), 
                               self.n_outputs_)
             
@@ -384,21 +389,44 @@ class WeightedDecisionTreeClassifier(TreeWeightsMixin, DecisionTreeClassifier):
                  feature_weight=None,
                  ccp_alpha=0.0):
         self.feature_weight = feature_weight
-        super().__init__(
-            criterion=criterion,
-            splitter=splitter,
-            max_depth=max_depth,
-            min_samples_split=min_samples_split,
-            min_samples_leaf=min_samples_leaf,
-            min_weight_fraction_leaf=min_weight_fraction_leaf,
-            max_features=max_features,
-            max_leaf_nodes=max_leaf_nodes,
-            class_weight=class_weight,
-            random_state=random_state,
-            min_impurity_decrease=min_impurity_decrease,
-            min_impurity_split=min_impurity_split,
-            presort=presort,
-            ccp_alpha=ccp_alpha)
+
+        init_args = dict(criterion=criterion,
+                         splitter=splitter,
+                         max_depth=max_depth,
+                         min_samples_split=min_samples_split,
+                         min_samples_leaf=min_samples_leaf,
+                         min_weight_fraction_leaf=min_weight_fraction_leaf,
+                         max_features=max_features,
+                         random_state=random_state,
+                         max_leaf_nodes=max_leaf_nodes,
+                         min_impurity_decrease=min_impurity_decrease,
+                         min_impurity_split=min_impurity_split,
+                         class_weight=class_weight,
+                         presort=presort,
+                         ccp_alpha=ccp_alpha,)
+
+        if SKLEARN_VERSION >= parse('1.0'):
+            # These attributes still need to be set for the deprecation checks. Should be removed in the future.
+            self.min_impurity_split = init_args.pop('min_impurity_split')
+            self.presort = init_args.pop('presort')
+
+        super().__init__(**init_args)
+
+        # super().__init__(
+        #     criterion=criterion,
+        #     splitter=splitter,
+        #     max_depth=max_depth,
+        #     min_samples_split=min_samples_split,
+        #     min_samples_leaf=min_samples_leaf,
+        #     min_weight_fraction_leaf=min_weight_fraction_leaf,
+        #     max_features=max_features,
+        #     max_leaf_nodes=max_leaf_nodes,
+        #     class_weight=class_weight,
+        #     random_state=random_state,
+        #     min_impurity_decrease=min_impurity_decrease,
+        #     min_impurity_split=min_impurity_split,
+        #     presort=presort,
+        #     ccp_alpha=ccp_alpha)
 
     
 class WeightedDecisionTreeRegressor(TreeWeightsMixin, DecisionTreeRegressor):
