@@ -465,6 +465,8 @@ def run_iRF(X_train,
             y_train,
             y_test,
             rf,
+            sample_weight_train=None,
+            sample_weight_test=None,
             rf_bootstrap=None,
             initial_weights = None,
             K=7,
@@ -585,11 +587,10 @@ def run_iRF(X_train,
     else:
         raise ValueError('the type of rf cannot be {}'.format(type(rf)))
     
-    weightedRF.fit(X=X_train, y=y_train, feature_weight = initial_weights, K=K,
-                   X_test = X_test, y_test = y_test)
+    weightedRF.fit(X=X_train, y=y_train, sample_weight=sample_weight_train, feature_weight = initial_weights, K=K,
+                   X_test=X_test, y_test=y_test, sample_weight_test=sample_weight_test)
     all_rf_weights = weightedRF.all_rf_weights
     all_K_iter_rf_data = weightedRF.all_K_iter_rf_data
-    
 
     # Run the RITs
     for b in range(B):
@@ -597,13 +598,18 @@ def run_iRF(X_train,
         # Take a bootstrap sample from the training data
         # based on the specified user proportion
         if isinstance(rf, ClassifierMixin):
-            X_train_rsmpl, y_rsmpl = resample(
-                X_train, y_train, n_samples=n_samples, stratify = y_train)
+            resample_fun = partial(resample, stratify=y_train)
         else:
-            X_train_rsmpl, y_rsmpl = resample(
+            resample_fun = resample
+
+        if sample_weight_train is None:
+            X_train_rsmpl, y_rsmpl = resample_fun(
                 X_train, y_train, n_samples=n_samples)
-            
-        
+            weight_rsmpl = None
+        else:
+            X_train_rsmpl, y_rsmpl, weight_rsmpl = resample_fun(
+                X_train, y_train, sample_weight_train, n_samples=n_samples)
+
 
         # Set up the weighted random forest
         # Using the weight from the (K-1)th iteration i.e. RF(w(K))
@@ -617,6 +623,7 @@ def run_iRF(X_train,
         rf_bootstrap.fit(
             X=X_train_rsmpl,
             y=y_rsmpl,
+            sample_weight=weight_rsmpl,
             feature_weight=all_rf_weights["rf_weight{}".format(K)])
 
         # All RF tree data
@@ -626,6 +633,7 @@ def run_iRF(X_train,
             X_train=X_train_rsmpl,
             X_test=X_test,
             y_test=y_test,
+            sample_weight_test=sample_weight_test,
             signed=signed)
 
         # Update the rf bootstrap output dictionary
@@ -661,6 +669,8 @@ def run_iRF_FPGrowth(X_train,
             y_train,
             y_test,
             rf,
+            sample_weight_train=None,
+            sample_weight_test=None,
             rf_bootstrap = None,
             initial_weights = None,
             K=7,
@@ -766,8 +776,8 @@ def run_iRF_FPGrowth(X_train,
     else:
         raise ValueError('the type of rf cannot be {}'.format(type(rf)))
     
-    weightedRF.fit(X=X_train, y=y_train, feature_weight = initial_weights, K=K,
-                   X_test = X_test, y_test = y_test)
+    weightedRF.fit(X=X_train, y=y_train, sample_weight_train=sample_weight_train, feature_weight=initial_weights, K=K,
+                   X_test=X_test, y_test=y_test, sample_weight_test=sample_weight_test)
     all_rf_weights = weightedRF.all_rf_weights
     all_K_iter_rf_data = weightedRF.all_K_iter_rf_data
 
@@ -805,6 +815,7 @@ def run_iRF_FPGrowth(X_train,
             X_train=X_train_rsmpl,
             X_test=X_test,
             y_test=y_test,
+            sample_weight_test=sample_weight_test,
             signed=signed)
 
         # Update the rf bootstrap output dictionary

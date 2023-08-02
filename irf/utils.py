@@ -14,7 +14,7 @@ from operator import itemgetter
 # Get all RF and decision tree data
 
 
-def get_rf_tree_data(rf, X_train, X_test, y_test, signed=False):
+def get_rf_tree_data(rf, X_train, X_test, y_test, sample_weight_test=None, signed=False):
     """
     Get the entire fitted random forest and its decision tree data
     as a convenient dictionary format
@@ -31,7 +31,8 @@ def get_rf_tree_data(rf, X_train, X_test, y_test, signed=False):
     # get all the validation rf_metrics
     rf_validation_metrics = get_validation_metrics(inp_class_reg_obj=rf,
                                                    y_true=y_test,
-                                                   X_test=X_test)
+                                                   X_test=X_test,
+                                                   sample_weight_test=sample_weight_test)
 
     # Create a dictionary with all random forest metrics
     # This currently includes the entire random forest fitted object
@@ -48,6 +49,7 @@ def get_rf_tree_data(rf, X_train, X_test, y_test, signed=False):
         dtree_out = get_tree_data(X_train=X_train,
                                   X_test=X_test,
                                   y_test=y_test,
+                                  sample_weight_test=sample_weight_test,
                                   dtree=dtree,
                                   root_node_id=0,
                                   signed=signed)
@@ -57,7 +59,7 @@ def get_rf_tree_data(rf, X_train, X_test, y_test, signed=False):
 
     return all_rf_tree_outputs
 
-def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0, signed=False):
+def get_tree_data(X_train, X_test, y_test, dtree, sample_weight_test=None, root_node_id=0, signed=False):
     """
     This returns all of the required summary results from an
     individual decision tree
@@ -230,7 +232,8 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0, signed=False):
     # decision tree against the test data
     validation_metrics = get_validation_metrics(inp_class_reg_obj=dtree,
                                                 y_true=y_test,
-                                                X_test=X_test)
+                                                X_test=X_test,
+                                                sample_weight_test=sample_weight_test)
 
     # Dictionary of all tree values
     tree_data = {"num_features_used": num_features_used,
@@ -252,7 +255,7 @@ def get_tree_data(X_train, X_test, y_test, dtree, root_node_id=0, signed=False):
                  "validation_metrics": validation_metrics}
     return tree_data
 
-def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
+def get_validation_metrics(inp_class_reg_obj, y_true, X_test, sample_weight_test):
     """
     Get the various Random Forest/ Decision Tree metrics
     This is currently setup only for classification forests and trees
@@ -365,32 +368,32 @@ def get_validation_metrics(inp_class_reg_obj, y_true, X_test):
         # metrics.jaccard_similarity_score(y_true = y_true, y_pred = y_pred)
 
         # Compute the F1 score, also known as balanced F-score or F-measure
-        f1_score = metrics.f1_score(y_true=y_true, y_pred=y_pred)
+        f1_score = metrics.f1_score(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Compute the average Hamming loss.
-        hamming_loss = metrics.hamming_loss(y_true=y_true, y_pred=y_pred)
+        hamming_loss = metrics.hamming_loss(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Log loss, aka logistic loss or cross-entropy loss.
-        log_loss = metrics.log_loss(y_true=y_true, y_pred=y_pred)
+        log_loss = metrics.log_loss(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Compute the precision
-        precision_score = metrics.precision_score(y_true=y_true, y_pred=y_pred)
+        precision_score = metrics.precision_score(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Compute the recall
-        recall_score = metrics.recall_score(y_true=y_true, y_pred=y_pred)
+        recall_score = metrics.recall_score(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Accuracy classification score
-        accuracy_score = metrics.accuracy_score(y_true=y_true, y_pred=y_pred)
+        accuracy_score = metrics.accuracy_score(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Build a text report showing the main classification metrics
         # classification_report = metrics.classification_report(
         # y_true=y_true, y_pred=y_pred)
 
         # Compute confusion matrix to evaluate the accuracy of a classification
-        confusion_matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred)
+        confusion_matrix = metrics.confusion_matrix(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Zero-one classification loss.
-        zero_one_loss = metrics.zero_one_loss(y_true=y_true, y_pred=y_pred)
+        zero_one_loss = metrics.zero_one_loss(y_true=y_true, y_pred=y_pred, sample_weight=sample_weight_test)
 
         # Load all metrics into a single dictionary
         classification_metrics = {"hamming_loss": hamming_loss,
