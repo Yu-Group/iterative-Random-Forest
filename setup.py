@@ -66,7 +66,7 @@ if __name__ == "__main__":
           install_requires=[
               "numpy<1.18",
               "scipy",
-              "scikit-learn>=0.22",
+              "scikit-learn < 0.23",
               "cython<3",
               "pyfpgrowth",
               "pyspark",
