@@ -67,7 +67,7 @@ if __name__ == "__main__":
               "numpy",
               "scipy",
               "scikit-learn>=0.22",
-              "cython",
+              "cython<3",
               "pyfpgrowth",
               "pyspark",
               "pyyaml",
