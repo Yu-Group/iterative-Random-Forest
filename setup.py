@@ -64,7 +64,7 @@ if __name__ == "__main__":
               'Operating System :: MacOS'
           ],
           install_requires=[
-              "numpy",
+              "numpy<1.18",
               "scipy",
               "scikit-learn>=0.22",
               "cython<3",
@@ -72,5 +72,6 @@ if __name__ == "__main__":
               "pyspark",
               "pyyaml",
               "pydotplus",
+              "matplotlib==3.5",
           ],
           setup_requires=["cython"])
