@@ -45,7 +45,7 @@ class RandomForestRegressorWithWeights(RandomForestRegressor):
         
 class wrf(RandomForestClassifierWithWeights):
     def fit(self, X, y, sample_weight=None, feature_weight=None, K = 5, 
-            keep_record = True, X_test = None, y_test = None):
+            keep_record = True, X_test = None, y_test = None, sample_weight_test=None):
         self.all_rf_weights = dict()
         if keep_record:
             self.all_K_iter_rf_data = dict()
@@ -62,6 +62,7 @@ class wrf(RandomForestClassifierWithWeights):
             super(wrf, self).fit(
                     X=X,
                     y=y,
+                    sample_weight=sample_weight,
                     feature_weight=feature_importances)
             
             # Update feature weights using the
@@ -73,7 +74,8 @@ class wrf(RandomForestClassifierWithWeights):
                         rf=self,
                         X_train=X,
                         X_test=X_test,
-                        y_test=y_test)
+                        y_test=y_test,
+                        sample_weight_test=sample_weight_test)
         return self
 
 #Eric: Doesn't lfook like much is changed here, as it looks like no significant differences between regressor and classifier
