@@ -10,7 +10,12 @@ The implementation is a joint effort of several people in UC Berkeley. See the [
 The weighted random forest implementation is based on the random forest source code and API design from [scikit-learn](http://scikit-learn.org/stable/index.html), details can be found in *API design for machine learning software: experiences from the scikit-learn project, Buitinck et al., 2013.*. The setup file is based on the setup file from [skgarden](https://github.com/scikit-garden/scikit-garden/tree/master/skgarden). 
 
 ## Installation
-To install, simply run `pip install irf`. If you run into any issues, see [installation help](installation.md).
+Use conda to create a python3.6 environment. Run the following commands inside the package directory
+```python
+pip install numpy cython==0.29 packaging
+pip install -e .
+```
+(outdated) To install, simply run `pip install irf`. If you run into any issues, see [installation help](installation.md).
 
 ## A simple demo
 In order to use irf, you need to import it in python.

@@ -72,6 +72,6 @@ if __name__ == "__main__":
               "pyspark",
               "pyyaml",
               "pydotplus",
-              "matplotlib==3.5",
+              "matplotlib",
           ],
           setup_requires=["cython"])

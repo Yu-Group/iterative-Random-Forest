@@ -93,6 +93,7 @@ class TreeWeightsMixin(BaseDecisionTree):
             X_idx_sorted=None):
         
         feature_weight = self.feature_weight # get feature_weight from attribute
+        self.n_features_ = X.shape[1]
         
         random_state = check_random_state(self.random_state)
         if check_input:
